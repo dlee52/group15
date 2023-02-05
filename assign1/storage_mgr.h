@@ -4,6 +4,14 @@
 #include "dberror.h"
 
 /************************************************************
+ *                    pagefile bookkeeping info             *
+ ************************************************************/
+typedef struct MGMT_Info {
+	int totalNumPages;
+	//otherBookKeepngInfo
+} mgmtInfo;
+
+/************************************************************
  *                    handle data structures                *
  ************************************************************/
 typedef struct SM_FileHandle {
