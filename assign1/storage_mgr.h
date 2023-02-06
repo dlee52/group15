@@ -9,7 +9,7 @@
 typedef struct MGMT_Info {
 	int totalNumPages;
 	//otherBookKeepngInfo
-} mgmtInfo;
+} MGMT_Info;
 
 /************************************************************
  *                    handle data structures                *

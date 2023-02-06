@@ -9,27 +9,27 @@
  */
 #include "storage_mgr.h"
 
-void initStorageManager ()
+extern void initStorageManager ()
 {
 	return;
 }
 
-RC createPageFile (char *fileName) 
+extern RC createPageFile (char *fileName) 
 {
 	return RC_OK;
 }
 
-RC openPageFile (char *fileName, SM_FileHandle *fHandle)
+extern RC openPageFile (char *fileName, SM_FileHandle *fHandle)
 {
 	return RC_OK;
 }
 
-RC closePageFile (SM_FileHandle *fHandle)
+extern RC closePageFile (SM_FileHandle *fHandle)
 {
 	return RC_OK;
 }
 
-RC destroyPageFile (char *fileName)
+extern RC destroyPageFile (char *fileName)
 {
 	return RC_OK;
 }

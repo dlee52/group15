@@ -15,6 +15,7 @@
 
 int main()
 {
-	printError(RC_FILE_NOT_FOUND);
-	return 0;
+    printf("\n%lu\n",sizeof(MGMT_Info));
+	printError(RC_OK);
+	return RC_OK;
 }

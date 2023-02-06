@@ -9,22 +9,22 @@
  */
 #include "storage_mgr.h"
 
-RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage)
+extern RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage)
 {
     return RC_OK;
 }
 
-RC writeCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage)
+extern RC writeCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage)
 {
     return RC_OK;
 }
 
-RC appendEmptyBlock (SM_FileHandle *fHandle)
+extern RC appendEmptyBlock (SM_FileHandle *fHandle)
 {
     return RC_OK;
 }
 
-RC ensureCapacity (int numberOfPages, SM_FileHandle *fHandle)
+extern RC ensureCapacity (int numberOfPages, SM_FileHandle *fHandle)
 {
     return RC_OK;
 }
