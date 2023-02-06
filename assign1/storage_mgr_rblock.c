@@ -21,6 +21,8 @@
 //                   pageNum pages, the method should return 
 //                   RC_READ_NON_EXISTING_PAGE.
 // +----------------+----------------------------------------------------------*
+
+// global 
 extern RC readBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage)
 {
 	return RC_OK;

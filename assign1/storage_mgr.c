@@ -15,7 +15,18 @@
 
 int main()
 {
+    RC rc;
+
+    SM_FileHandle fHandle;
+    SM_PageHandle memPage;
+
+    fHandle.fileName = "/Users/daniel/c/cs525-s23-group-15/assign1/page1.txt";
+    rc = createPageFile(fHandle.fileName);
+    //rc = readBlock(1, &fHandle, memPage);
+
+
+    printf("\n%s\n",fHandle.fileName);
     printf("\n%lu\n",sizeof(MGMT_Info));
-	printError(RC_OK);
+	//printError(RC_OK);
 	return RC_OK;
 }
