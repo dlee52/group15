@@ -18,6 +18,44 @@ extern void initStorageManager (void)
 }
 
 extern RC createPageFile(const char *filename) {
+    MGMT_Info mgmtInfo;
+    int     mgmtLen = sizeof(MGMT_Info);
+    int     buffLen = PAGE_SIZE + mgmtLen;
+    int     len;
+    char    buff[buffLen];
+    FILE    *fp;
+
+    // File Write
+    fp = fopen(fileName, "w+");
+    if (fp == NULL) {
+        printf(" [%s] file write error [%d][%s]\r\n",
+            fileName, errno, strerror(errno));
+        return RC_WRITE_FAILED;
+    }
+
+    // construct buffer to write 
+    mgmtInfo.totalNumPages = 1; 
+    memset(buff, 0x00, buffLen);
+    memcpy(buff, &mgmtInfo, sizeof(MGMT_Info));
+
+    // write the buffer to file
+    len = fwrite(buff, 1, buffLen, fp);
+
+    // validate write succeeded
+    if (len != buffLen) {
+        printf(" [%s] File write error [%d] [%d] \r\n\a\a",
+            fileName, buffLen, len);
+        fclose(fp);
+        return RC_WRITE_FAILED;
+    }    
+
+    fclose(fp);
+    printf("\nCreated a page, %s. Wrote %d(mgmtInfo: %d + page:%d) bytes\n", fileName
+            , PAGE_SIZE + mgmtLen
+            , PAGE_SIZE, mgmtLen);
+
+    return RC_OK;
+/*
   // Open the file with "w+" mode, creating it if it doesn't exist, and allowing both reading and writing.
   FILE *fp = fopen(filename, "w+");
   // If the file pointer is NULL, the file could not be opened and return RC_FILE_NOT_FOUND.
@@ -48,6 +86,7 @@ extern RC createPageFile(const char *filename) {
   fclose(fp);
   // Return RC_OK to indicate success.
   return RC_OK;
+  */
 }
 
 
