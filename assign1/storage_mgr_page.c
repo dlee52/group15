@@ -4,7 +4,7 @@
  * +----------------+----------------------------------------------------------+
  *    Description    manipulating page files
  *    Remark         
- *                   by Tejas
+ *                   by Daniel
  * +----------------+----------------------------------------------------------+
  */
 #include <errno.h>
@@ -15,11 +15,23 @@ extern void initStorageManager ()
 	return;
 }
 
+
+SM_FileHandle fHandle;
+
+// +----------------+----------------------------------------------------------*
+//    Description    Create a new page file fileName. The initial file size 
+//                   should be one page. This method should fill this single 
+//                   page with '\0' bytes.
+//            
+//    Notes          It writes MGMT_Info at the beginning of the page file
+// +----------------+----------------------------------------------------------*
 extern RC createPageFile (char *fileName) 
 {
-
-    char    blockBuf[PAGE_SIZE];
+    MGMT_Info mgmtInfo;
+    int     mgmtLen = sizeof(MGMT_Info);
+    int     buffLen = PAGE_SIZE + mgmtLen;
     int     len;
+    char    buff[buffLen];
     FILE    *fp;
 
     // File Write
@@ -30,42 +42,27 @@ extern RC createPageFile (char *fileName)
         return RC_WRITE_FAILED;
     }
 
-    fclose(fp);
-    printf("\ncreatePageFile success\n");
-   /* 
-    recLen = sizeof(CloseRec);
-    memset(&CloseRec, 0x00, RecLen);
+    // construct buffer to write 
+    mgmtInfo.totalNumPages = 1; 
+    memset(buff, 0x00, buffLen);
+    memcpy(buff, &mgmtInfo, sizeof(MGMT_Info));
 
-    
-    len = sizeof(TableSize);
-    rlen = fread(&TableSize, 1, len, Fp);
-    if (len != rlen) {
-        printf(" [%s][%d][%d] file read error [%d][%s]\r\n",
-            len, rlen, FileName, errno, strerror(errno));
-        fclose(Fp);
-        return -1;
-    }
-    len = TableSize;
-    memset(FareTable,   0x00, sizeof(FareTable)); // LKJ 970722
-    rlen = fread(FareTable, 1, len, Fp);
-    if (len != rlen) {
-        printf(" [%s][%d][%d] file read error [%d][%s]\r\n",
-            len, rlen, FileName, errno, strerror(errno));
-        fclose(Fp);
-        return -1;
-    }
-    fclose(Fp);
-    CmdInitSR(NodeNum, TaskNum, &CmdSR);
-    CmdSR.SendBuf = FareTable;
-    CmdSR.SendLen = 52;   // 52 = (±¸°£:1 + ¿ä±Ý:2 * 6) * 4   LKJ 970722
-    memset(RBuf, 0x00, sizeof(RBuf));
-    CmdSR.RecvBuf = RBuf;
-    if (CmdSendRecv(&CmdSR)) {  
-        return -1;
-    }
-    return 0;
-    */
-        
+    // write the buffer to file
+    len = fwrite(buff, 1, buffLen, fp);
+
+    // validate write succeeded
+    if (len != buffLen) {
+        printf(" [%s] File write error [%d] [%d] \r\n\a\a",
+            fileName, buffLen, len);
+        fclose(fp);
+        return RC_WRITE_FAILED;
+    }    
+
+    fclose(fp);
+    printf("\nCreated a page, %s. Wrote %d(mgmtInfo: %d + page:%d) bytes\n", fileName
+            , PAGE_SIZE + mgmtLen
+            , PAGE_SIZE, mgmtLen);
+
 	return RC_OK;
 }
 
