@@ -7,13 +7,6 @@
 //#define PAGE_SIZE 10
 #define PAGE_SIZE 4096
 
-/************************************************************
- *                    pagefile bookkeeping info             *
- ************************************************************/
-typedef struct MGMT_Info {
-	int totalNumPages;
-	//otherBookKeepngInfo
-} MGMT_Info;
 
 /************************************************************
  *                    handle data structures                *
