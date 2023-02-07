@@ -10,6 +10,8 @@
 #include "storage_mgr.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
 extern void initStorageManager (void)
 {
