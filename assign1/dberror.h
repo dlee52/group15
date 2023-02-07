@@ -3,10 +3,6 @@
 
 #include "stdio.h"
 
-/* module wide constants */
-#define PAGE_SIZE 10
-//#define PAGE_SIZE 4096
-
 /* return code definitions */
 typedef int RC;
 

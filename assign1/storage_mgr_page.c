@@ -19,7 +19,7 @@ extern void initStorageManager (void)
 	printf("Creating page file\n"); 
 }
 
-extern RC createPageFile(const char *filename) {
+extern RC createPageFile(const char *fileName) {
     MGMT_Info mgmtInfo;
     int     mgmtLen = sizeof(MGMT_Info);
     int     buffLen = PAGE_SIZE + mgmtLen;
