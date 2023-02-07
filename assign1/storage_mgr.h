@@ -4,8 +4,8 @@
 #include "dberror.h"
 
 /* module wide constants */
-#define PAGE_SIZE 10
-//#define PAGE_SIZE 4096
+//#define PAGE_SIZE 10
+#define PAGE_SIZE 4096
 
 /************************************************************
  *                    pagefile bookkeeping info             *
