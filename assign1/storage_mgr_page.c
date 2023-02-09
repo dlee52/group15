@@ -19,13 +19,13 @@ extern void initStorageManager (void)
 	printf("Creating page file\n"); 
 }
 
-extern RC createPageFile(const char *fileName) {
-    MGMT_Info mgmtInfo;
+extern RC createPageFile(char *fileName) {
     int     mgmtLen = sizeof(MGMT_Info);
     int     buffLen = PAGE_SIZE + mgmtLen;
     int     len;
     char    buff[buffLen];
     FILE    *fp;
+    MGMT_Info mgmtInfo;
 
     // File Write
     fp = fopen(fileName, "w+");
@@ -52,125 +52,71 @@ extern RC createPageFile(const char *fileName) {
     }    
 
     fclose(fp);
-    printf("\nCreated a page, %s. Wrote %d(mgmtInfo: %d + page:%d) bytes\n", fileName
-            , PAGE_SIZE + mgmtLen
-            , PAGE_SIZE, mgmtLen);
-
     return RC_OK;
-/*
-  // Open the file with "w+" mode, creating it if it doesn't exist, and allowing both reading and writing.
-  FILE *fp = fopen(filename, "w+");
-  // If the file pointer is NULL, the file could not be opened and return RC_FILE_NOT_FOUND.
-  if (!fp) {
-    return RC_FILE_NOT_FOUND;
-  }
-
-  // Allocate memory for the page using calloc, which sets all bytes to zero.
-  char *page = calloc(PAGE_SIZE, sizeof(char));
-  // If the memory allocation failed, close the file and return RC_WRITE_FAILED.
-  if (!page) {
-    fclose(fp);
-    return RC_WRITE_FAILED;
-  }
-
-  // Write the contents of the memory block to the file.
-  size_t elements_written = fwrite(page, sizeof(char), PAGE_SIZE, fp);
-  // If the number of elements written is not equal to PAGE_SIZE, free the memory, close the file, and return RC_WRITE_FAILED.
-  if (elements_written != PAGE_SIZE) {
-    free(page);
-    fclose(fp);
-    return RC_WRITE_FAILED;
-  }
-
-  // Free the memory used for the page.
-  free(page);
-  // Close the file.
-  fclose(fp);
-  // Return RC_OK to indicate success.
-  return RC_OK;
-  */
 }
 
-
-extern RC createPageFile(char *filename)
+// +----------------+----------------------------------------------------------*
+//    Description    Opens an existing page file. Should return RC_FILE_NOT_FOUND 
+//                   if the file does not exist. The second parameter is an 
+//                   existing file handle. If opening the file is successful, 
+//                   then the fields of this file handle should be initialized 
+//                   with the information about the opened file. For instance, 
+//                   you would have to read the total number of pages that are 
+//                   stored in the file from disk.
+// +----------------+----------------------------------------------------------*
+extern RC openPageFile(char *filename, SM_FileHandle *fileHandle)
 {
-  // Open the file with "w+" mode, creating it if it doesn't exist, and allowing both reading and writing.
-  FILE *fp = fopen(filename, "w+");
-  // If the file pointer is NULL, the file could not be opened and return RC_FILE_NOT_FOUND.
-  if (!fp)
-  {
-    return RC_FILE_NOT_FOUND;
-  }
+    MGMT_Info mgmtInfo;
+    int rlen=0;
 
-  // Allocate memory for the page using calloc, which sets all bytes to zero.
-  char *page = calloc(PAGE_SIZE, sizeof(char));
-  // If the memory allocation failed, close the file and return RC_WRITE_FAILED.
-  if (!page)
-  {
-    fclose(fp);
-    return RC_WRITE_FAILED;
-  }
+    //open the file with the given filename and "r" mode (read-only)
+    FILE *fp = fopen(filename, "r");
 
-  // Write the contents of the memory block to the file.
-  size_t elements_written = fwrite(page, sizeof(char), PAGE_SIZE, fp);
-  // If the number of elements written is not equal to PAGE_SIZE, free the memory, close the file, and return RC_WRITE_FAILED.
-  if (elements_written != PAGE_SIZE)
-  {
-    free(page);
-    fclose(fp);
-    return RC_WRITE_FAILED;
-  }
+    //declare two integer variables to store the file page count and the file size
+    int filepgcnt, filesize;
 
-  // Free the memory used for the page.
-  free(page);
-  // Close the file.
-  fclose(fp);
-  // Return RC_OK to indicate success.
-  return RC_OK;
-}
+    //check if the file has been successfully opened
+    if (fp == NULL) {
+        //if file is not found, return the error code RC_FILE_NOT_FOUND
+        return RC_FILE_NOT_FOUND;
+    } else {
+        // Read mgmtInfo of the page
+        rlen = fread(&mgmtInfo, 1, sizeof(MGMT_Info), fp);
+        if (rlen != sizeof(MGMT_Info)) {
+            fclose(fp);
+            return RC_PAGE_INFO_READ_ERROR;
+        }
 
-extern RC openPageFile(char *fileName, SM_FileHandle *fHandle)
-{
-  // Open the file in read-write mode
-  FILE *file = fopen(fileName, "r+");
-  // Check if file exists
-  if (file == NULL)
-  {
-    return RC_FILE_NOT_FOUND;
-  }
+        //if file is found, store the filename in the SM_FileHandle struct
+        fileHandle->fileName = filename;
 
-  // Get the size of the file
-  fseek(file, 0, SEEK_END);
-  int length = ftell(file);
-  // Calculate the number of pages
-  int totalPages = length / PAGE_SIZE;
-  if (length % PAGE_SIZE != 0)
-  {
-    totalPages++;
-  }
+        //calculate the number of pages by dividing the file size by the page size
+        fileHandle->totalNumPages = mgmtInfo.totalNumPages;
 
-  // Initialize the file handle
-  fHandle->fileName = fileName;
-  fHandle->totalNumPages = totalPages;
-  fHandle->curPagePos = 0;
-  fHandle->mgmtInfo = file;
+        //initialize the current page position to 0
+        fileHandle->curPagePos = 0;
 
-  // Reset the file position to the beginning of the file
-  fseek(file, 0, SEEK_SET);
+        //set the page info read from the file
+        memmove(&fileHandle->mgmtInfo, &mgmtInfo, sizeof(MGMT_Info));
 
-  return RC_OK;
+        //store the file pointer in the SM_FileHandle struct's management information     
+        fileHandle->mgmtInfo.fp = fp;
+
+        //return RC_OK if everything goes well
+        return RC_OK;
+    }
 }
 
 extern RC closePageFile(SM_FileHandle *fHandle)
 {
   /* Close the file handle pointed to by fHandle->mgmtInfo */
-  int result = fclose((FILE *)fHandle->mgmtInfo);
+  int result = fclose(fHandle->mgmtInfo.fp);
 
   /* Check if the file handle was closed successfully */
   if (result == 0)
   {
     /* Set the mgmtInfo field of the file handle to NULL */
-    fHandle->mgmtInfo = NULL;
+    fHandle->mgmtInfo.fp = NULL;
     /* Return RC_OK to indicate that the file handle was closed successfully */
     return RC_OK;
   }

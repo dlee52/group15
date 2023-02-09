@@ -11,8 +11,14 @@
  *                    pagefile bookkeeping info             *
  ************************************************************/
 typedef struct MGMT_Info {
+    FILE *fp;
     int totalNumPages;
-    //otherBookKeepngInfo
+    
+    // for future book keeping purpose 
+    int intHolder1;
+    int intHolder2;
+    char byteHolder1[100];
+    char byteHolder2[100];
 } MGMT_Info;
 
 /************************************************************
@@ -22,7 +28,7 @@ typedef struct SM_FileHandle {
 	char *fileName;
 	int totalNumPages;
 	int curPagePos;
-	void *mgmtInfo;
+	MGMT_Info mgmtInfo;
 } SM_FileHandle;
 
 typedef char* SM_PageHandle;

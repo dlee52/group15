@@ -24,6 +24,10 @@ typedef int RC;
 #define RC_IM_N_TO_LAGE 302
 #define RC_IM_NO_MORE_ENTRIES 303
 
+// Custom defined
+#define RC_FILE_NOT_CLOSED 400
+#define RC_PAGE_INFO_READ_ERROR 410
+
 /* holder for error messages */
 extern char *RC_message;
 

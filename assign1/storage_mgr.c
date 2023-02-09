@@ -21,7 +21,7 @@ int main()
     SM_PageHandle memPage;
 
     // set fHandle accordingly
-    fHandle.fileName = "/Users/daniel/c/cs525-s23-group-15/assign1/page1.txt";
+    fHandle.fileName = "/Users/daniel/c/sandbox/assign1/page1.txt";
     fHandle.curPagePos = 0;
     fHandle.totalNumPages = 0;
     fHandle.mgmtInfo = NULL;
@@ -30,7 +30,7 @@ int main()
     //rc = readBlock(1, &fHandle, memPage);
 
     printf("\n%s\n",fHandle.fileName);
-    printf("\n%lu\n",sizeof(MGMT_Info));
+    printf("\nMGMT_Info Size: %lu\n",sizeof(MGMT_Info));
 	//printError(RC_OK);
 	return RC_OK;
 }
