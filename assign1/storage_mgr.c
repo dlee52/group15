@@ -20,17 +20,19 @@ int main()
     SM_FileHandle fHandle;
     SM_PageHandle memPage;
 
-    // set fHandle accordingly
-    fHandle.fileName = "/Users/daniel/c/sandbox/assign1/page1.txt";
-    fHandle.curPagePos = 0;
-    fHandle.totalNumPages = 0;
-    fHandle.mgmtInfo = NULL;
 
-    rc = createPageFile(fHandle.fileName);
+    char filename[100]= "/Users/daniel/c/sandbox/assign1/page1.txt";
+
+
+    rc = createPageFile(filename);
     //rc = readBlock(1, &fHandle, memPage);
 
-    printf("\n%s\n",fHandle.fileName);
-    printf("\nMGMT_Info Size: %lu\n",sizeof(MGMT_Info));
-	//printError(RC_OK);
-	return RC_OK;
+    openPageFile(filename, &fHandle);
+
+    printf("\n[fHandle]\nfileName: %s, \ntotalNumPages: %d\n"
+            , fHandle.fileName
+            , fHandle.totalNumPages);
+
+    fclose(fHandle.mgmtInfo.fp);
+    return RC_OK;
 }
