@@ -21,6 +21,8 @@ extern void initStorageManager (void)
 
 extern RC createPageFile(char *fileName) {
     int     mgmtLen = sizeof(MGMT_Info);
+
+    // buffer length
     int     buffLen = PAGE_SIZE + mgmtLen;
     int     len;
     char    buff[buffLen];
@@ -38,7 +40,7 @@ extern RC createPageFile(char *fileName) {
     // construct buffer to write 
     mgmtInfo.totalNumPages = 1; 
     memset(buff, 0x00, buffLen);
-    memcpy(buff, &mgmtInfo, sizeof(MGMT_Info));
+    memmove(buff, &mgmtInfo, sizeof(MGMT_Info));
 
     // write the buffer to file
     len = fwrite(buff, 1, buffLen, fp);

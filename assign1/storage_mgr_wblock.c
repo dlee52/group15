@@ -13,6 +13,7 @@
 
 // Writing the page to a Disk by using absolute count
 RC writeBlockToDisk(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memoryPage) {
+/*
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   FILE *fp = getFileDescriptor(fileHandle);
   if (!fp) return RC_FILE_NOT_FOUND;
@@ -33,16 +34,21 @@ RC writeBlockToDisk(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memory
   if (fileSize % PAGE_SIZE != 0) ++totalPages;
   fileHandle->totalNumPages = totalPages;
 
+*/
   return RC_OK;
 }
 // Now we have to write the current block
 RC writeCurrentBlockToFile(SM_FileHandle *fileHandle, SM_PageHandle memoryPage) {
+/*
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   int currPage = fileHandle->curPagePos;
   return writeBlockToDisk(currPage, fileHandle, memoryPage);
+*/
+return RC_OK;
 }
 //Here we are appending the empty block
 RC appendEmptyPage(SM_FileHandle *fileHandle) {
+/*
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   int newPage = fileHandle->totalNumPages;
 
@@ -58,15 +64,18 @@ RC appendEmptyPage(SM_FileHandle *fileHandle) {
   free(emptyMemory);
 
   ++fileHandle->totalNumPages;
+*/
 
   return RC_OK;
 }
 // Here we have to ensure that there is sufficient capacity
 RC ensureSufficientCapacity(int numPages, SM_FileHandle *fileHandle) {
+/*
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   while (numPages > fileHandle->totalNumPages) {
     if (appendEmptyPage(fileHandle) != RC_OK) return RC_WRITE_FAILED;
   }
+*/
   return RC_OK;
 }
 

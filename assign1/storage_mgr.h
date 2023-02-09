@@ -1,6 +1,13 @@
+#ifndef __DEBUG__
+#define __DEBUG__
+#endif
+
 #ifndef STORAGE_MGR_H
 #define STORAGE_MGR_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "dberror.h"
 
 /* module wide constants */

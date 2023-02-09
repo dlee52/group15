@@ -2,3 +2,5 @@
 *.DS_Store
 storage_mgr
 *.txt
+*storage_mgr
+*.swp

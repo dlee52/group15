@@ -8,10 +8,7 @@
  * +----------------+----------------------------------------------------------+
  */
 
-#include <stdio.h>
 #include "storage_mgr.h"
-
-#include "dberror.h"
 
 int main()
 {
@@ -21,18 +18,29 @@ int main()
     SM_PageHandle memPage;
 
 
-    char filename[100]= "/Users/daniel/c/sandbox/assign1/page1.txt";
+    char filename[100]= "/Users/daniel/c/525/assign1/page2.txt";
 
 
     rc = createPageFile(filename);
-    //rc = readBlock(1, &fHandle, memPage);
 
     openPageFile(filename, &fHandle);
+    
+    memPage = (SM_PageHandle)malloc(PAGE_SIZE);
+    rc = readBlock(1, &fHandle, memPage);
+    rc = readFirstBlock(&fHandle, memPage);
+    rc = readPreviousBlock(&fHandle, memPage);
+    rc = readCurrentBlock(&fHandle, memPage);
+    rc = readNextBlock(&fHandle, memPage);
+    rc = readLastBlock(&fHandle, memPage);
 
-    printf("\n[fHandle]\nfileName: %s, \ntotalNumPages: %d\n"
+    #ifdef __DEBUG__
+    printf("\n[fHandle] fileName: %s, totalNumPages: %d, getBlockPos: %d"
             , fHandle.fileName
-            , fHandle.totalNumPages);
+            , fHandle.totalNumPages
+            , getBlockPos(&fHandle));
+    printf("\n"); 
+    #endif
 
     fclose(fHandle.mgmtInfo.fp);
-    return RC_OK;
+    return rc;
 }
