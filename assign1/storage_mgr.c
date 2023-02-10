@@ -12,41 +12,6 @@
 #include <string.h>
 #include "storage_mgr.h"
 
-int main()
-{
-    RC rc;
-
-    SM_FileHandle fHandle;
-    SM_PageHandle memPage;
-
-
-    char filename[100]= "/Users/daniel/c/525/assign1/page2.txt";
-
-
-    rc = createPageFile(filename);
-
-    openPageFile(filename, &fHandle);
-    
-    memPage = (SM_PageHandle)malloc(PAGE_SIZE);
-    rc = readBlock(1, &fHandle, memPage);
-    rc = readFirstBlock(&fHandle, memPage);
-    rc = readPreviousBlock(&fHandle, memPage);
-    rc = readCurrentBlock(&fHandle, memPage);
-    rc = readNextBlock(&fHandle, memPage);
-    rc = readLastBlock(&fHandle, memPage);
-
-    #ifdef __DEBUG__
-    printf("\n[fHandle] fileName: %s, totalNumPages: %d, getBlockPos: %d"
-            , fHandle.fileName
-            , fHandle.totalNumPages
-            , getBlockPos(&fHandle));
-    printf("\n"); 
-    #endif
-
-    fclose(fHandle.mgmtInfo.fp);
-    return rc;
-}
-
 extern void initStorageManager (void)
 {
     printf("Storage Manager is getting Build\n");
@@ -231,13 +196,13 @@ extern RC readBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage)
         printf("\n[Error] File Handle is NULL.\n");
         return RC_FILE_HANDLE_NOT_INIT;
     }
-    if(pageNum <=0 || pageNum > fHandle->totalNumPages) {
-        printf("\n[Error] Invalid page number (requested: %d, allowed: 1 - %d).\n", pageNum, fHandle->totalNumPages);
+    if(pageNum <0 || pageNum > fHandle->totalNumPages) {
+        printf("\n[Error] Invalid page number (requested: %d, allowed: 0 - %d).\n", pageNum, fHandle->totalNumPages);
         return RC_READ_NON_EXISTING_PAGE;
     }
 
-    // calculate offset of the request page. Assume that page number starts from 1.
-    offset = sizeof(MGMT_Info) + (pageNum-1) * PAGE_SIZE;
+    // calculate offset of the request page. Assume that page number starts from 0.
+    offset = sizeof(MGMT_Info) + (pageNum) * PAGE_SIZE;
 
     // move to the start of the requested page
     fseek(fHandle->mgmtInfo.fp, offset, SEEK_SET);
@@ -314,8 +279,11 @@ extern RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage)
 }
 
 // Writing the page to a Disk by using absolute count
-RC writeBlockToDisk(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memoryPage) {
-  if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
+RC writeBlock(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memoryPage) {
+    int len=0;
+  if (!fileHandle) {
+    return RC_FILE_HANDLE_NOT_INIT;
+    }
   //FILE *fp = getFileDescriptor(fileHandle);
   FILE *fp = fileHandle->mgmtInfo.fp;
   if (!fp) return RC_FILE_NOT_FOUND;
@@ -323,19 +291,28 @@ RC writeBlockToDisk(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memory
   ensureCapacity(pageNum, fileHandle);
 
   int offset = sizeof(MGMT_Info);
-  int pageLocation = offset + (pageNum * PAGE_SIZE);
+  int pageLocation = offset + ((pageNum) * PAGE_SIZE);
   if (fseek(fp, pageLocation, SEEK_SET) != 0) return RC_WRITE_FAILED;
   // creating a block
 
-  fwrite(memoryPage, sizeof(char), PAGE_SIZE, fp);
+  len = fwrite(memoryPage, sizeof(char), PAGE_SIZE, fp);
+
+    // validate write succeeded
+    if (len != PAGE_SIZE) {
+        printf(" [%s] File write error [%d] [%d] \r\n\a\a",
+            fileHandle->fileName, PAGE_SIZE, len);
+        return RC_WRITE_FAILED;
+    }    
   // creating an update of page position by using written block
   fileHandle->curPagePos = pageNum;
   // Now we have to update the overall number of pages.
 
-  int fileSize = ftell(fp);
-  int totalPages = (fileSize - offset) / PAGE_SIZE;
-  if ((fileSize - offset) % PAGE_SIZE != 0) ++totalPages;
-  fileHandle->totalNumPages = totalPages;
+ 
+  //int fileSize = ftell(fp);
+  //int totalPages = (fileSize - offset) / PAGE_SIZE;
+  //if ((fileSize - offset) % PAGE_SIZE != 0) ++totalPages;
+  //fileHandle->totalNumPages = totalPages;
+  fileHandle->totalNumPages++;
 
   return RC_OK;
 }
@@ -343,7 +320,7 @@ RC writeBlockToDisk(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memory
 RC writeCurrentBlockToFile(SM_FileHandle *fileHandle, SM_PageHandle memoryPage) {
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   int currPage = fileHandle->curPagePos;
-  return writeBlockToDisk(currPage, fileHandle, memoryPage);
+  return writeBlock(currPage, fileHandle, memoryPage);
 }
 //Here we are appending the empty block
 RC appendEmptyPage(SM_FileHandle *fileHandle) {
