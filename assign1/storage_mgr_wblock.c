@@ -15,10 +15,11 @@
 // Writing the page to a Disk by using absolute count
 RC writeBlockToDisk(int pageNum, SM_FileHandle *fileHandle, SM_PageHandle memoryPage) {
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
-  FILE *fp = getFileDescriptor(fileHandle);
+  //FILE *fp = getFileDescriptor(fileHandle);
+  FILE *fp = fileHandle->mgmtInfo.fp;
   if (!fp) return RC_FILE_NOT_FOUND;
 
-  ensureSufficientCapacity(pageNum, fileHandle);
+  ensureCapacity(pageNum, fileHandle);
 
   int offset = sizeof(MGMT_Info);
   int pageLocation = offset + (pageNum * PAGE_SIZE);
@@ -48,7 +49,7 @@ RC appendEmptyPage(SM_FileHandle *fileHandle) {
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   int newPage = fileHandle->totalNumPages;
 
-  FILE *fp = getFileDescriptor(fileHandle);
+  FILE *fp = fileHandle->mgmtInfo.fp;
   if (!fp) return RC_FILE_NOT_FOUND;
 
   int offset = sizeof(MGMT_Info);
@@ -65,10 +66,11 @@ RC appendEmptyPage(SM_FileHandle *fileHandle) {
   return RC_OK;
 }
 // Here we have to ensure that there is sufficient capacity
-RC ensureSufficientCapacity(int numPages, SM_FileHandle *fileHandle)
+// Description If the file has less than numberOfPages pages then increase the size to numberOfPages
+RC ensureCapacity(int numPages, SM_FileHandle *fileHandle)
 {
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
-  while (numPages > fileHandle->totalNumPages); {
+  while (numPages > fileHandle->totalNumPages) {
     RC result = appendEmptyPage(fileHandle);
     if (result != RC_OK) return RC_WRITE_FAILED;
   }

@@ -111,6 +111,32 @@ extern RC openPageFile(char *filename, SM_FileHandle *fileHandle)
 
 extern RC closePageFile(SM_FileHandle *fHandle)
 {
+    // Write MGMT_Info into the page file before closing
+    MGMT_Info mgmtInfo;
+    char buff[sizeof(MGMT_Info)];
+    int len=0;
+
+    // Read MGMT_Info in the page file into mgmtInfo
+    memmove(&mgmtInfo, &fHandle->mgmtInfo, sizeof(MGMT_Info));
+    mgmtInfo.totalNumPages = fHandle->totalNumPages;
+
+    // Set the file position to the beginning
+    // move to the start of the requested page
+    fseek(fHandle->mgmtInfo.fp, 0, SEEK_SET);
+
+    // write the buffer to file
+    memset(buff, 0x00, sizeof(MGMT_Info));
+    memmove(buff, &mgmtInfo, sizeof(MGMT_Info));    
+    len = fwrite(buff, 1, sizeof(MGMT_Info), fHandle->mgmtInfo.fp);
+
+    // validate write succeeded
+    if (len != sizeof(MGMT_Info)) {
+        //printf(" [%s] File write error [%d] [%d] \r\n\a\a", fHandle->fileName, (unsigned long) sizeof(MGMT_Info), len);
+        fclose(fHandle->mgmtInfo.fp);
+        return RC_WRITE_FAILED;
+    }        
+    // file write
+
   /* Close the file handle pointed to by fHandle->mgmtInfo */
   int result = fclose(fHandle->mgmtInfo.fp);
 
