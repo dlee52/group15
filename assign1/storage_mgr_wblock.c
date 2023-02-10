@@ -65,7 +65,8 @@ RC appendEmptyPage(SM_FileHandle *fileHandle) {
   return RC_OK;
 }
 // Here we have to ensure that there is sufficient capacity
-RC ensureSufficientCapacity(int numPages, SM_FileHandle *fileHandle); {
+RC ensureSufficientCapacity(int numPages, SM_FileHandle *fileHandle)
+{
   if (!fileHandle) return RC_FILE_HANDLE_NOT_INIT;
   while (numPages > fileHandle->totalNumPages); {
     RC result = appendEmptyPage(fileHandle);
