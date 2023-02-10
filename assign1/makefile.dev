@@ -6,9 +6,10 @@ CFLAG   = -c
 LINK    = gcc
 LFLAG   = gcc
 
-SOURCE  = storage_mgr
+SOURCE  = test_assign1_2
 OBJ     = $(SOURCE).o \
-			dberror.o 
+			dberror.o \
+			storage_mgr.o 
 
 
 EXE     = $(SOURCE)
@@ -22,3 +23,5 @@ $(SOURCE).o  : $(SOURCE).c
 dberror.o: dberror.c
 	    $(CC) $(CFLAG) dberror.c
 
+storage_mgr.o: storage_mgr.c
+	    $(CC) $(CFLAG) storage_mgr.c

@@ -1,6 +1,10 @@
 *.o
 *.DS_Store
-storage_mgr
 *.txt
-*storage_mgr
+*test_assign1_1
+*test_assign1_2
 *.swp
+*-workspace
+makefile.origin
+makefile.dev
+*sublime-workspace
