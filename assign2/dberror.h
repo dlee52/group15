@@ -15,6 +15,11 @@ typedef int RC;
 #define RC_WRITE_FAILED 3
 #define RC_READ_NON_EXISTING_PAGE 4
 
+#define RC_BM_PAGE_IN_BUFFER_ERROR 100
+#define RC_BM_NOT_INITIALIZED 101
+#define RC_BM_PAGE_NOT_FOUND 102
+#define RC_BM_BUFFER_FULL 103
+
 #define RC_RM_COMPARE_VALUE_OF_DIFFERENT_DATATYPE 200
 #define RC_RM_EXPR_RESULT_IS_NOT_BOOLEAN 201
 #define RC_RM_BOOLEAN_EXPR_ARG_IS_NOT_BOOLEAN 202
@@ -27,31 +32,37 @@ typedef int RC;
 #define RC_IM_N_TO_LAGE 302
 #define RC_IM_NO_MORE_ENTRIES 303
 
+#define RC_NO_MORE_SPACE_IN_BUFFER 401
+#define RC_UNKNOWN_STRATEGY 402
+#define RC_INVALID_BM 403
+#define RC_NON_EXISTING_PAGE_IN_FRAME 404
+
 /* holder for error messages */
 extern char *RC_message;
 
 /* print a message to standard out describing the error */
-extern void printError (RC error);
-extern char *errorMessage (RC error);
+extern void printError(RC error);
+extern char *errorMessage(RC error);
 
-#define THROW(rc,message) \
-		do {			  \
-			RC_message=message;	  \
-			return rc;		  \
-		} while (0)		  \
+#define THROW(rc, message)    \
+	do                        \
+	{                         \
+		RC_message = message; \
+		return rc;            \
+	} while (0)
 
 // check the return code and exit if it is an error
-#define CHECK(code)							\
-		do {									\
-			int rc_internal = (code);						\
-			if (rc_internal != RC_OK)						\
-			{									\
-				char *message = errorMessage(rc_internal);			\
-				printf("[%s-L%i-%s] ERROR: Operation returned error: %s\n",__FILE__, __LINE__, __TIME__, message); \
-				free(message);							\
-				exit(1);							\
-			}									\
-		} while(0);
-
+#define CHECK(code)                                                                                             \
+	do                                                                                                          \
+	{                                                                                                           \
+		int rc_internal = (code);                                                                               \
+		if (rc_internal != RC_OK)                                                                               \
+		{                                                                                                       \
+			char *message = errorMessage(rc_internal);                                                          \
+			printf("[%s-L%i-%s] ERROR: Operation returned error: %s\n", __FILE__, __LINE__, __TIME__, message); \
+			free(message);                                                                                      \
+			exit(1);                                                                                            \
+		}                                                                                                       \
+	} while (0);
 
 #endif
