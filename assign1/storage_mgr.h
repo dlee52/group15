@@ -1,8 +1,6 @@
-/*
 #ifndef __DEBUG__
 #define __DEBUG__
 #endif
-*/
 
 #ifndef STORAGE_MGR_H
 #define STORAGE_MGR_H

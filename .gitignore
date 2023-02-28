@@ -1,1 +1,10 @@
-*.sublime-workspace
+*.o
+*.DS_Store
+*.txt
+*test_assign1_1
+*test_assign1_2
+*.swp
+*-workspace
+makefile.origin
+makefile.dev
+*sublime-workspace

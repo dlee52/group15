@@ -32,6 +32,10 @@ typedef int RC;
 #define RC_IM_N_TO_LAGE 302
 #define RC_IM_NO_MORE_ENTRIES 303
 
+// Custom defined
+#define RC_FILE_NOT_CLOSED 400
+#define RC_PAGE_INFO_READ_ERROR 410
+
 #define RC_NO_MORE_SPACE_IN_BUFFER 401
 #define RC_UNKNOWN_STRATEGY 402
 #define RC_INVALID_BM 403
