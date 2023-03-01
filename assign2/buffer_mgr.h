@@ -37,7 +37,6 @@ typedef struct BM_FrameHandle
     int lastUsedTime;
 } BM_FrameHandle;
 
-// typedef struct BM_Metadata
 typedef struct BM_mgmtData
 {
     SM_FileHandle *fileHandle;
@@ -53,7 +52,7 @@ typedef struct BM_mgmtData
 
 #define MAKE_FILE_HANDLE() ((SM_FileHandle *)malloc(sizeof(SM_FileHandle)));
 
-#define MAKE_BM_METADATA() ((BM_Metadata *)malloc(sizeof(BM_Metadata)))
+#define MAKE_BM_METADATA() ((BM_mgmtData *)malloc(sizeof(BM_mgmtData)))
 
 #endif
 // Replacement Strategies
