@@ -82,8 +82,8 @@ RC initBufferPool(BM_BufferPool *bm, const char *pageFileName,
 
 RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
 {
-    BM_BufferPool *metadata = buffer_pool->mgmtData;
-    RETURN_IF_NULL(metadata, RC_BM_NOT_INITIALIZED,
+    BM_mgmtData *mgmtData = buffer_pool->mgmtData;
+    RETURN_IF_NULL(mgmtData, RC_BM_NOT_INITIALIZED,
                    "Buffer pool not initialized.");
 
     // Flush all dirty pages to disk before shutdown.
@@ -92,7 +92,7 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
     // Check if any pages are currently pinned.
     for (int i = 0; i < buffer_pool->numPages; ++i)
     {
-        BM_FrameHandle *frame = &metadata->frames[i];
+        BM_FrameHandle *frame = &mgmtData->frames[i];
         RETURN_IF_NOT_EQ(frame->fixedCount, 0, RC_BM_PAGE_IN_BUFFER_ERROR,
                          "Buffer pool in use.");
     }
@@ -100,22 +100,22 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
     // Free all page data in buffer.
     for (int i = 0; i < buffer_pool->numPages; ++i)
     {
-        BM_FrameHandle *frame = &metadata->frames[i];
+        BM_FrameHandle *frame = &mgmtData->frames[i];
         free(frame->pageHandle->data);
         free(frame->pageHandle);
         frame->pageHandle = NULL;
     }
 
     // Close the page file.
-    closePageFile(metadata->fileHandle);
+    closePageFile(mgmtData->fileHandle);
 
     // Free all specially allocated memory.
-    free(metadata->statData->dirtyFlagsArray);
-    free(metadata->statData->fixCountsArray);
-    free(metadata->statData->pageNumberArray);
-    free(metadata->fileHandle);
-    free(metadata->frames);
-    free(metadata->statData);
+    free(mgmtData->statData->dirtyFlagsArray);
+    free(mgmtData->statData->fixCountsArray);
+    free(mgmtData->statData->pageNumberArray);
+    free(mgmtData->fileHandle);
+    free(mgmtData->frames);
+    free(mgmtData->statData);
     free(buffer_pool->mgmtData);
     free(buffer_pool->pageFile);
 
@@ -129,8 +129,8 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
 // Flushes a frame to disk
 RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
 {
-    BM_BufferPool *metadata = bufferPool->mgmtData;
-    SM_FileHandle *fileHandle = metadata->fileHandle;
+    BM_mgmtData *mgmtData = bufferPool->mgmtData;
+    SM_FileHandle *fileHandle = mgmtData->fileHandle;
     BM_PageHandle *pageHandle = frameHandle->pageHandle;
 
     // Ensure that the file has enough capacity to store the flushed page
@@ -145,7 +145,7 @@ RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
     frameHandle->isDirty = false;
 
     // Increment the number of writes
-    ++metadata->statData->numWrites;
+    ++mgmtData->statData->numWrites;
 
     RETURN_OK("Frame flushed to disk.");
 }
@@ -153,17 +153,17 @@ RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
 // Forces all dirty pages in a buffer pool to be flushed to disk
 RC forceFlushPool(BM_BufferPool *const bufferPool)
 {
-    BM_BufferPool *metadata = bufferPool->mgmtData;
+    BM_mgmtData *mgmtData = bufferPool->mgmtData;
 
     // Check if the buffer pool has been initialized
-    RETURN_IF_NULL(metadata, RC_BM_NOT_INITIALIZED, "Buffer pool not initialized.");
+    RETURN_IF_NULL(mgmtData, RC_BM_NOT_INITIALIZED, "Buffer pool not initialized.");
 
-    SM_FileHandle *fileHandle = metadata->fileHandle;
+    SM_FileHandle *fileHandle = mgmtData->fileHandle;
 
     // Iterate over all frames in the buffer pool
     for (int i = 0; i < bufferPool->numPages; ++i)
     {
-        BM_FrameHandle *frame = &metadata->frames[i];
+        BM_FrameHandle *frame = &mgmtData->frames[i];
 
         // Flush the frame if it is dirty and not pinned
         if (frame->isDirty && frame->fixedCount == 0)
@@ -269,7 +269,7 @@ PageNumber *getFrameContents (BM_BufferPool *const bm)
 
 bool *getDirtyFlags (BM_BufferPool *const bm)
 {
-    return TRUE;
+    return NULL;
 }
 
 int *getFixCounts (BM_BufferPool *const bm)

@@ -3,6 +3,7 @@
 
 // Include return codes and methods for logging errors
 #include "dberror.h"
+#include "storage_mgr.h"
 
 // Include bool DT
 #include "dt.h"
@@ -22,13 +23,27 @@ typedef struct BM_Stats
     int *pageNumberArray;
 } BM_Stats;
 
+typedef int PageNumber;
+typedef struct BM_PageHandle {
+	PageNumber pageNum;
+	char *data;
+} BM_PageHandle;
+
+typedef struct BM_FrameHandle
+{
+    BM_PageHandle *pageHandle;
+    bool isDirty;
+    int fixedCount;
+    int lastUsedTime;
+} BM_FrameHandle;
+
 // typedef struct BM_Metadata
 typedef struct BM_mgmtData
 {
     SM_FileHandle *fileHandle;
     BM_FrameHandle *frames;
     BM_Stats *statData;
-} BM_Metadata;
+} BM_mgmtData;
 
 // convenience macros
 #define MAKE_FRAMES(numFrames) \
@@ -51,7 +66,6 @@ typedef enum ReplacementStrategy {
 } ReplacementStrategy;
 
 // Data Types and Structures
-typedef int PageNumber;
 #define NO_PAGE -1
 
 typedef struct BM_BufferPool {
@@ -62,21 +76,6 @@ typedef struct BM_BufferPool {
 	// manager needs for a buffer pool
 } BM_BufferPool;
 
-typedef struct BM_PageHandle {
-	PageNumber pageNum;
-	char *data;
-} BM_PageHandle;
-
-#ifndef BUFFER_MANAGER_CUSTOM_H
-#define BUFFER_MANAGER_CUSTOM_H
-typedef struct BM_FrameHandle
-{
-    BM_PageHandle *pageHandle;
-    bool isDirty;
-    int fixedCount;
-    int lastUsedTime;
-} BM_FrameHandle;
-#endif
 
 
 // convenience macros
