@@ -288,22 +288,47 @@ int getNumWriteIO (BM_BufferPool *const bm)
 }
 
 
+// +----------------+----------------------------------------------------------*
+//    Description    Mark page frame dirty (modified)
+// +----------------+----------------------------------------------------------*
 // Buffer Manager Interface Access Pages
 RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page)
 {
     return RC_OK;
 }
 
+// +----------------+----------------------------------------------------------*
+//    Description    Inform the buffer manager that he no longer needs that page
+//                   The pageNum field of page should be used to figure out 
+//                   which page to unpin
+// +----------------+----------------------------------------------------------*
 RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page)
 {
     return RC_OK;
 }
 
+// +----------------+----------------------------------------------------------*
+//    Description    Write the current content of the page back to the page 
+//                   file on disk.
+// +----------------+----------------------------------------------------------*
 RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page)
 {
     return RC_OK;
 }
 
+// +----------------+----------------------------------------------------------*
+//    Description    Request pages identified by their position in the page file
+//                   ( page number) to be loaded in a page frame. 
+//                   Check whether the page requested by the client is already 
+//                   cached in a page frame. If this is the case, then the buffer 
+//                   simply returns a pointer to this page frame to the client. 
+//                   Otherwise, the buffer manager has to read this page from 
+//                   disk and decide in which page frame it should be stored 
+//                   (this is what the replacement strategy is for). Once an 
+//                   appropriate frame is found and the page has been loaded, 
+//                   the buffer manager returns a pointer to this frame to the 
+//                   client.
+// +----------------+----------------------------------------------------------*
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         const PageNumber pageNum)
 {
