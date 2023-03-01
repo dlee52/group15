@@ -8,7 +8,6 @@
 
 #include "dberror.h"
 #include "storage_mgr.h"
-#include "structure.h"
 #include "validation.h"
 
 // Buffer Manager Interface Pool Handling
@@ -61,25 +60,30 @@ RC initBufferPool(BM_BufferPool *bm, const char *pageFileName,
     stats->pageNumberArray = (PageNumber *)malloc(sizeof(PageNumber) * numPages);
 
     // Collect all metadata in a single structure.
-    BM_Metadata *metadata = (BM_Metadata *)malloc(sizeof(BM_Metadata));
-    metadata->frames = frames;
-    metadata->statData = stats;
-    metadata->fileHandle = fileHandle;
+    // BM_BufferPool *metadata = (BM_BufferPool *)malloc(sizeof(BM_BufferPool));
+    // metadata->frames = frames;
+    // metadata->statData = stats;
+    // metadata->fileHandle = fileHandle;
+    BM_mgmtData *mgmtData = (BM_mgmtData *)malloc(sizeof(BM_mgmtData));
+    mgmtData->frames = frames;
+    mgmtData->statData = stats;
+    mgmtData->fileHandle = fileHandle;
 
     // Set metadata in BufferPool.
     bm->pageFile = (char *)malloc(sizeof(char) * (strlen(pageFileName) + 1));
     strcpy(bm->pageFile, pageFileName);
     bm->numPages = numPages;
     bm->strategy = strategy;
-    bm->mgmtData = metadata;
+    //bm->mgmtData = metadata;
+    memmove(bm->mgmtData, mgmtData, sizeof(BM_mgmtData));
 
     return RC_OK;
 }
 
 RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
 {
-    BM_Metadata *metadata = buffer_pool->mgmtData;
-    RETURN_IF_NULL(metadata, RC_BM_NOT_INITIALIZED,
+    BM_mgmtData *mgmtData = buffer_pool->mgmtData;
+    RETURN_IF_NULL(mgmtData, RC_BM_NOT_INITIALIZED,
                    "Buffer pool not initialized.");
 
     // Flush all dirty pages to disk before shutdown.
@@ -88,7 +92,7 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
     // Check if any pages are currently pinned.
     for (int i = 0; i < buffer_pool->numPages; ++i)
     {
-        BM_FrameHandle *frame = &metadata->frames[i];
+        BM_FrameHandle *frame = &mgmtData->frames[i];
         RETURN_IF_NOT_EQ(frame->fixedCount, 0, RC_BM_PAGE_IN_BUFFER_ERROR,
                          "Buffer pool in use.");
     }
@@ -96,22 +100,22 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
     // Free all page data in buffer.
     for (int i = 0; i < buffer_pool->numPages; ++i)
     {
-        BM_FrameHandle *frame = &metadata->frames[i];
+        BM_FrameHandle *frame = &mgmtData->frames[i];
         free(frame->pageHandle->data);
         free(frame->pageHandle);
         frame->pageHandle = NULL;
     }
 
     // Close the page file.
-    closePageFile(metadata->fileHandle);
+    closePageFile(mgmtData->fileHandle);
 
     // Free all specially allocated memory.
-    free(metadata->statData->dirtyFlagsArray);
-    free(metadata->statData->fixCountsArray);
-    free(metadata->statData->pageNumberArray);
-    free(metadata->fileHandle);
-    free(metadata->frames);
-    free(metadata->statData);
+    free(mgmtData->statData->dirtyFlagsArray);
+    free(mgmtData->statData->fixCountsArray);
+    free(mgmtData->statData->pageNumberArray);
+    free(mgmtData->fileHandle);
+    free(mgmtData->frames);
+    free(mgmtData->statData);
     free(buffer_pool->mgmtData);
     free(buffer_pool->pageFile);
 
@@ -125,8 +129,8 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
 // Flushes a frame to disk
 RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
 {
-    BM_Metadata *metadata = bufferPool->mgmtData;
-    SM_FileHandle *fileHandle = metadata->fileHandle;
+    BM_mgmtData *mgmtData = bufferPool->mgmtData;
+    SM_FileHandle *fileHandle = mgmtData->fileHandle;
     BM_PageHandle *pageHandle = frameHandle->pageHandle;
 
     // Ensure that the file has enough capacity to store the flushed page
@@ -141,7 +145,7 @@ RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
     frameHandle->isDirty = false;
 
     // Increment the number of writes
-    ++metadata->statData->numWrites;
+    ++mgmtData->statData->numWrites;
 
     RETURN_OK("Frame flushed to disk.");
 }
@@ -149,17 +153,17 @@ RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
 // Forces all dirty pages in a buffer pool to be flushed to disk
 RC forceFlushPool(BM_BufferPool *const bufferPool)
 {
-    BM_Metadata *metadata = bufferPool->mgmtData;
+    BM_mgmtData *mgmtData = bufferPool->mgmtData;
 
     // Check if the buffer pool has been initialized
-    RETURN_IF_NULL(metadata, RC_BM_NOT_INITIALIZED, "Buffer pool not initialized.");
+    RETURN_IF_NULL(mgmtData, RC_BM_NOT_INITIALIZED, "Buffer pool not initialized.");
 
-    SM_FileHandle *fileHandle = metadata->fileHandle;
+    SM_FileHandle *fileHandle = mgmtData->fileHandle;
 
     // Iterate over all frames in the buffer pool
     for (int i = 0; i < bufferPool->numPages; ++i)
     {
-        BM_FrameHandle *frame = &metadata->frames[i];
+        BM_FrameHandle *frame = &mgmtData->frames[i];
 
         // Flush the frame if it is dirty and not pinned
         if (frame->isDirty && frame->fixedCount == 0)
@@ -181,12 +185,13 @@ typedef struct BM_Statistics {
   int numWriteIO;
 } BM_Statistics;
 
-// Update the BM_Metadata struct to include statistics
-typedef struct BM_Metadata {
+// Update the BM_BufferPool struct to include statistics
+/*
+typedef struct BM_BufferPool {
   BM_PageFrame *frames;
   BM_Statistics *statData;
   // ...
-} BM_Metadata;
+} BM_BufferPool;
 
 // Function to initialize the statistics
 BM_Statistics *initBMStatistics(int numPages) {
@@ -200,7 +205,7 @@ BM_Statistics *initBMStatistics(int numPages) {
 }
 
 // Function to update the statistics
-void updateBMStatistics(BM_Metadata *metadata) {
+void updateBMStatistics(BM_BufferPool *metadata) {
   for (int i = 0; i < metadata->numPages; ++i) {
     BM_PageHandle *pageHandle = metadata->frames[i].pageHandle;
     if (pageHandle != NULL) {
@@ -214,7 +219,7 @@ void updateBMStatistics(BM_Metadata *metadata) {
 // Implement the statistics interface functions
 PageNumber *getFrameContents(BM_BufferPool *const bm) {
   // Assumes bm is initialized.
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   for (int i = 0; i < bm->numPages; ++i) {
     BM_PageHandle *pageHandle = metadata->frames[i].pageHandle;
     metadata->statData->frameContents[i] = pageHandle->pageNum;
@@ -224,7 +229,7 @@ PageNumber *getFrameContents(BM_BufferPool *const bm) {
 
 bool *getDirtyFlags(BM_BufferPool *const bm) {
   // Assumes bm is initialized.
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   for (int i = 0; i < bm->numPages; ++i) {
     metadata->statData->dirtyFlags[i] = metadata->frames[i].isDirty;
   }
@@ -233,7 +238,7 @@ bool *getDirtyFlags(BM_BufferPool *const bm) {
 
 int *getFixCounts(BM_BufferPool *const bm) {
   // Assumes bm is initialized.
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   for (int i = 0; i < bm->numPages; ++i) {
     metadata->statData->fixCounts[i] = metadata->frames[i].fixedCount;
   }
@@ -241,7 +246,7 @@ int *getFixCounts(BM_BufferPool *const bm) {
 }
 
 int getNumReadIO(BM_BufferPool *const bm) {
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   if (metadata == NULL) {
     return RC_BM_NOT_INITIALIZED;
   }
@@ -249,9 +254,84 @@ int getNumReadIO(BM_BufferPool *const bm) {
 }
 
 int getNumWriteIO(BM_BufferPool *const bm) {
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   if (metadata == NULL) {
     return RC_BM_NOT_INITIALIZED;
   }
   return metadata->statData->numWriteIO;
 }
+*/
+
+PageNumber *getFrameContents (BM_BufferPool *const bm)
+{
+    return RC_OK;
+}
+
+bool *getDirtyFlags (BM_BufferPool *const bm)
+{
+    return NULL;
+}
+
+int *getFixCounts (BM_BufferPool *const bm)
+{
+    return 0;
+}
+
+int getNumReadIO (BM_BufferPool *const bm)
+{
+    return 0;
+}
+
+int getNumWriteIO (BM_BufferPool *const bm)
+{
+    return 0;
+}
+
+
+// +----------------+----------------------------------------------------------*
+//    Description    Mark page frame dirty (modified)
+// +----------------+----------------------------------------------------------*
+// Buffer Manager Interface Access Pages
+RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page)
+{
+    return RC_OK;
+}
+
+// +----------------+----------------------------------------------------------*
+//    Description    Inform the buffer manager that he no longer needs that page
+//                   The pageNum field of page should be used to figure out 
+//                   which page to unpin
+// +----------------+----------------------------------------------------------*
+RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page)
+{
+    return RC_OK;
+}
+
+// +----------------+----------------------------------------------------------*
+//    Description    Write the current content of the page back to the page 
+//                   file on disk.
+// +----------------+----------------------------------------------------------*
+RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page)
+{
+    return RC_OK;
+}
+
+// +----------------+----------------------------------------------------------*
+//    Description    Request pages identified by their position in the page file
+//                   ( page number) to be loaded in a page frame. 
+//                   Check whether the page requested by the client is already 
+//                   cached in a page frame. If this is the case, then the buffer 
+//                   simply returns a pointer to this page frame to the client. 
+//                   Otherwise, the buffer manager has to read this page from 
+//                   disk and decide in which page frame it should be stored 
+//                   (this is what the replacement strategy is for). Once an 
+//                   appropriate frame is found and the page has been loaded, 
+//                   the buffer manager returns a pointer to this frame to the 
+//                   client.
+// +----------------+----------------------------------------------------------*
+RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
+        const PageNumber pageNum)
+{
+    return RC_OK;
+}
+
