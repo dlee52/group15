@@ -8,7 +8,6 @@
 
 #include "dberror.h"
 #include "storage_mgr.h"
-#include "structure.h"
 #include "validation.h"
 
 // Buffer Manager Interface Pool Handling
@@ -61,24 +60,29 @@ RC initBufferPool(BM_BufferPool *bm, const char *pageFileName,
     stats->pageNumberArray = (PageNumber *)malloc(sizeof(PageNumber) * numPages);
 
     // Collect all metadata in a single structure.
-    BM_Metadata *metadata = (BM_Metadata *)malloc(sizeof(BM_Metadata));
-    metadata->frames = frames;
-    metadata->statData = stats;
-    metadata->fileHandle = fileHandle;
+    // BM_BufferPool *metadata = (BM_BufferPool *)malloc(sizeof(BM_BufferPool));
+    // metadata->frames = frames;
+    // metadata->statData = stats;
+    // metadata->fileHandle = fileHandle;
+    BM_mgmtData *mgmtData = (BM_mgmtData *)malloc(sizeof(BM_mgmtData));
+    mgmtData->frames = frames;
+    mgmtData->statData = stats;
+    mgmtData->fileHandle = fileHandle;
 
     // Set metadata in BufferPool.
     bm->pageFile = (char *)malloc(sizeof(char) * (strlen(pageFileName) + 1));
     strcpy(bm->pageFile, pageFileName);
     bm->numPages = numPages;
     bm->strategy = strategy;
-    bm->mgmtData = metadata;
+    //bm->mgmtData = metadata;
+    memmove(bm->mgmtData, mgmtData, sizeof(BM_mgmtData));
 
     return RC_OK;
 }
 
 RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
 {
-    BM_Metadata *metadata = buffer_pool->mgmtData;
+    BM_BufferPool *metadata = buffer_pool->mgmtData;
     RETURN_IF_NULL(metadata, RC_BM_NOT_INITIALIZED,
                    "Buffer pool not initialized.");
 
@@ -125,7 +129,7 @@ RC shutdownBufferPool(BM_BufferPool *const buffer_pool)
 // Flushes a frame to disk
 RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
 {
-    BM_Metadata *metadata = bufferPool->mgmtData;
+    BM_BufferPool *metadata = bufferPool->mgmtData;
     SM_FileHandle *fileHandle = metadata->fileHandle;
     BM_PageHandle *pageHandle = frameHandle->pageHandle;
 
@@ -149,7 +153,7 @@ RC flushFrame(BM_BufferPool *bufferPool, BM_FrameHandle *frameHandle)
 // Forces all dirty pages in a buffer pool to be flushed to disk
 RC forceFlushPool(BM_BufferPool *const bufferPool)
 {
-    BM_Metadata *metadata = bufferPool->mgmtData;
+    BM_BufferPool *metadata = bufferPool->mgmtData;
 
     // Check if the buffer pool has been initialized
     RETURN_IF_NULL(metadata, RC_BM_NOT_INITIALIZED, "Buffer pool not initialized.");
@@ -181,12 +185,13 @@ typedef struct BM_Statistics {
   int numWriteIO;
 } BM_Statistics;
 
-// Update the BM_Metadata struct to include statistics
-typedef struct BM_Metadata {
+// Update the BM_BufferPool struct to include statistics
+/*
+typedef struct BM_BufferPool {
   BM_PageFrame *frames;
   BM_Statistics *statData;
   // ...
-} BM_Metadata;
+} BM_BufferPool;
 
 // Function to initialize the statistics
 BM_Statistics *initBMStatistics(int numPages) {
@@ -200,7 +205,7 @@ BM_Statistics *initBMStatistics(int numPages) {
 }
 
 // Function to update the statistics
-void updateBMStatistics(BM_Metadata *metadata) {
+void updateBMStatistics(BM_BufferPool *metadata) {
   for (int i = 0; i < metadata->numPages; ++i) {
     BM_PageHandle *pageHandle = metadata->frames[i].pageHandle;
     if (pageHandle != NULL) {
@@ -214,7 +219,7 @@ void updateBMStatistics(BM_Metadata *metadata) {
 // Implement the statistics interface functions
 PageNumber *getFrameContents(BM_BufferPool *const bm) {
   // Assumes bm is initialized.
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   for (int i = 0; i < bm->numPages; ++i) {
     BM_PageHandle *pageHandle = metadata->frames[i].pageHandle;
     metadata->statData->frameContents[i] = pageHandle->pageNum;
@@ -224,7 +229,7 @@ PageNumber *getFrameContents(BM_BufferPool *const bm) {
 
 bool *getDirtyFlags(BM_BufferPool *const bm) {
   // Assumes bm is initialized.
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   for (int i = 0; i < bm->numPages; ++i) {
     metadata->statData->dirtyFlags[i] = metadata->frames[i].isDirty;
   }
@@ -233,7 +238,7 @@ bool *getDirtyFlags(BM_BufferPool *const bm) {
 
 int *getFixCounts(BM_BufferPool *const bm) {
   // Assumes bm is initialized.
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   for (int i = 0; i < bm->numPages; ++i) {
     metadata->statData->fixCounts[i] = metadata->frames[i].fixedCount;
   }
@@ -241,7 +246,7 @@ int *getFixCounts(BM_BufferPool *const bm) {
 }
 
 int getNumReadIO(BM_BufferPool *const bm) {
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   if (metadata == NULL) {
     return RC_BM_NOT_INITIALIZED;
   }
@@ -249,9 +254,59 @@ int getNumReadIO(BM_BufferPool *const bm) {
 }
 
 int getNumWriteIO(BM_BufferPool *const bm) {
-  BM_Metadata *metadata = bm->mgmtData;
+  BM_BufferPool *metadata = bm->mgmtData;
   if (metadata == NULL) {
     return RC_BM_NOT_INITIALIZED;
   }
   return metadata->statData->numWriteIO;
 }
+*/
+
+PageNumber *getFrameContents (BM_BufferPool *const bm)
+{
+    return RC_OK;
+}
+
+bool *getDirtyFlags (BM_BufferPool *const bm)
+{
+    return TRUE;
+}
+
+int *getFixCounts (BM_BufferPool *const bm)
+{
+    return 0;
+}
+
+int getNumReadIO (BM_BufferPool *const bm)
+{
+    return 0;
+}
+
+int getNumWriteIO (BM_BufferPool *const bm)
+{
+    return 0;
+}
+
+
+// Buffer Manager Interface Access Pages
+RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page)
+{
+    return RC_OK;
+}
+
+RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page)
+{
+    return RC_OK;
+}
+
+RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page)
+{
+    return RC_OK;
+}
+
+RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
+        const PageNumber pageNum)
+{
+    return RC_OK;
+}
+

@@ -1,4 +1,5 @@
 *.o
+*.bin
 *.DS_Store
 *.txt
 *test_assign1_1
