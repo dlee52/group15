@@ -404,6 +404,10 @@ RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page)
 //                   appropriate frame is found and the page has been loaded, 
 //                   the buffer manager returns a pointer to this frame to the 
 //                   client.
+//
+//   Implementations Here are the attributtes used for each algorithm
+//                   [FIFO] firstPinnedTime 
+//                   [LRU ] lastUsedTime 
 // +----------------+----------------------------------------------------------*
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         const PageNumber pageNum)
@@ -444,7 +448,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
 
         // update the frame info
         frame->pageHandle->pageNum = pageNum;
-        frame->fixedCount++;
+        frame->fixedCount = 1;
         frame->lastUsedTime = (int)time(NULL);
 
         // update the page info
@@ -461,6 +465,36 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         return RC_UNKNOWN_STRATEGY;
     }
 
+    // if frame is dirty, write to page file
+    if (frame->isDirty) {
+        rc = writeBlock(pageNum, bm->mgmtData->fileHandle, frame->pageHandle->data);
+        if (rc != RC_OK) 
+        {
+
+#ifdef __DEBUG__
+        printf("\n[pinPage] writeBlock failed [RC: %d]", rc);
+#endif
+            return rc;
+        }        
+    }
+
+    // replace the frame with the one read from the page file
+    rc = readBlock(pageNum, bm->mgmtData->fileHandle, frame->pageHandle->data);
+    // reading error
+    if (rc != RC_OK)
+    {
+        return rc;
+    }
+
+    // update the frame info
+    frame->pageHandle->pageNum = pageNum;
+    frame->fixedCount = 1;
+    frame->lastUsedTime = (int)time(NULL);
+    frame->firstPinnedTime = (int)time(NULL);
+
+    // update the page info
+    page->pageNum = frame->pageHandle->pageNum;
+    page->data = frame->pageHandle->data;
 
     return RC_OK;
 }
@@ -522,7 +556,8 @@ BM_FrameHandle *searchEmptyFrame(BM_BufferPool *const bm)
 }
 
 // +----------------+----------------------------------------------------------*
-//    Description    Search an empty frame
+//    Description    Search a frame based on replacement strategy 
+//                   either FIFO or LSU
 // +----------------+----------------------------------------------------------*
 BM_FrameHandle *searchFrameByStrategy(BM_BufferPool *const bm, ReplacementStrategy strategy)
 {
