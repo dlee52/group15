@@ -34,7 +34,8 @@ typedef struct BM_FrameHandle
     BM_PageHandle *pageHandle;
     bool isDirty;
     int fixedCount;
-    int lastUsedTime;
+    int lastUsedTime;    // for LRU
+    int firstPinnedTime; // for FIFO
 } BM_FrameHandle;
 
 typedef struct BM_mgmtData
@@ -105,6 +106,10 @@ int *getFixCounts (BM_BufferPool *const bm);
 int getNumReadIO (BM_BufferPool *const bm);
 int getNumWriteIO (BM_BufferPool *const bm);
 
+// Custom Functions
+BM_FrameHandle *searchFrame(BM_BufferPool *const bm, PageNumber const pn);
+BM_FrameHandle *searchEmptyFrame(BM_BufferPool *const bm);
+BM_FrameHandle *searchFrameByStrategy(BM_BufferPool *const bm, ReplacementStrategy strategy);
 #endif
 
 
