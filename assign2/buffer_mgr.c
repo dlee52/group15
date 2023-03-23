@@ -1,3 +1,7 @@
+#ifndef __DEBUG__
+#define __DEBUG__
+#endif
+
 #include "buffer_mgr.h"
 
 #include <limits.h>
@@ -16,6 +20,9 @@ RC initBufferPool(BM_BufferPool *bm, const char *pageFileName,
                   int numPages, ReplacementStrategy strategy,
                   void *strategyData)
 {
+#ifdef __DEBUG__
+    printf("\nbegin initBufferPool\n");
+#endif
 
     // Check for empty file name.
     if (pageFileName == NULL || strlen(pageFileName) == 0)
@@ -29,6 +36,9 @@ RC initBufferPool(BM_BufferPool *bm, const char *pageFileName,
         return RC_FILE_NOT_FOUND;
     }
 
+#ifdef __DEBUG__
+    printf("\n  > before Openfile\n");
+#endif
     // Open page file.
     SM_FileHandle *fileHandle = (SM_FileHandle *)malloc(sizeof(SM_FileHandle));
     RC openStatus = openPageFile((char *)pageFileName, fileHandle);
@@ -78,6 +88,9 @@ RC initBufferPool(BM_BufferPool *bm, const char *pageFileName,
     //bm->mgmtData = metadata;
     memmove(bm->mgmtData, mgmtData, sizeof(BM_mgmtData));
 
+#ifdef __DEBUG__
+    printf("\nend initBufferPool");
+#endif
     return RC_OK;
 }
 
@@ -178,114 +191,61 @@ RC forceFlushPool(BM_BufferPool *const bufferPool)
 }
 
 // Define the statistics interface
+// Define the statistics interface
 typedef struct BM_Statistics {
-  PageNumber *frameContents;
-  bool *dirtyFlags;
-  int *fixCounts;
-  int numReadIO;
-  int numWriteIO;
+  PageNumber *pageNumberArray;
+  bool *dirtyFlagsArray;
+  int *fixCountsArray;
+  int numReads;
+  int numWrites;
 } BM_Statistics;
-
-// Update the BM_BufferPool struct to include statistics
-/*
-typedef struct BM_BufferPool {
-  BM_PageFrame *frames;
-  BM_Statistics *statData;
-  // ...
-} BM_BufferPool;
 
 // Function to initialize the statistics
 BM_Statistics *initBMStatistics(int numPages) {
-  BM_Statistics *statData = malloc(sizeof(BM_Statistics));
-  statData->frameContents = calloc(numPages, sizeof(PageNumber));
-  statData->dirtyFlags = calloc(numPages, sizeof(bool));
-  statData->fixCounts = calloc(numPages, sizeof(int));
-  statData->numReadIO = 0;
-  statData->numWriteIO = 0;
-  return statData;
+    BM_Statistics *statData = malloc(sizeof(BM_Statistics));
+    statData->pageNumberArray = calloc(numPages, sizeof(PageNumber));
+    statData->dirtyFlagsArray = calloc(numPages, sizeof(bool));
+    statData->fixCountsArray = calloc(numPages, sizeof(int));
+    statData->numReads = 0;
+    statData->numWrites = 0;
+    return statData;
 }
 
 // Function to update the statistics
-void updateBMStatistics(BM_BufferPool *metadata) {
-  for (int i = 0; i < metadata->numPages; ++i) {
-    BM_PageHandle *pageHandle = metadata->frames[i].pageHandle;
-    if (pageHandle != NULL) {
-      metadata->statData->frameContents[i] = pageHandle->pageNum;
-      metadata->statData->dirtyFlags[i] = metadata->frames[i].isDirty;
-      metadata->statData->fixCounts[i] = metadata->frames[i].fixedCount;
+void updateBMStatistics(BM_BufferPool *const bm) {
+    for (int i = 0; i < bm->numPages; ++i) {
+        BM_PageHandle *pageHandle = bm->mgmtData->frames[i].pageHandle;
+        if (pageHandle != NULL) {
+            bm->mgmtData->statData->pageNumberArray[i] = pageHandle->pageNum;
+            bm->mgmtData->statData->dirtyFlagsArray[i] = bm->mgmtData->frames[i].isDirty;
+            bm->mgmtData->statData->fixCountsArray[i] = bm->mgmtData->frames[i].fixedCount;
+        }
     }
-  }
 }
+
 
 // Implement the statistics interface functions
 PageNumber *getFrameContents(BM_BufferPool *const bm) {
-  // Assumes bm is initialized.
-  BM_BufferPool *metadata = bm->mgmtData;
-  for (int i = 0; i < bm->numPages; ++i) {
-    BM_PageHandle *pageHandle = metadata->frames[i].pageHandle;
-    metadata->statData->frameContents[i] = pageHandle->pageNum;
-  }
-  return metadata->statData->frameContents;
+    updateBMStatistics(bm);
+    return bm->mgmtData->statData->pageNumberArray;
 }
 
 bool *getDirtyFlags(BM_BufferPool *const bm) {
-  // Assumes bm is initialized.
-  BM_BufferPool *metadata = bm->mgmtData;
-  for (int i = 0; i < bm->numPages; ++i) {
-    metadata->statData->dirtyFlags[i] = metadata->frames[i].isDirty;
-  }
-  return metadata->statData->dirtyFlags;
+    updateBMStatistics(bm);
+    return bm->mgmtData->statData->dirtyFlagsArray;
 }
 
 int *getFixCounts(BM_BufferPool *const bm) {
-  // Assumes bm is initialized.
-  BM_BufferPool *metadata = bm->mgmtData;
-  for (int i = 0; i < bm->numPages; ++i) {
-    metadata->statData->fixCounts[i] = metadata->frames[i].fixedCount;
-  }
-  return metadata->statData->fixCounts;
+    updateBMStatistics(bm);
+    return bm->mgmtData->statData->fixCountsArray;
 }
 
 int getNumReadIO(BM_BufferPool *const bm) {
-  BM_BufferPool *metadata = bm->mgmtData;
-  if (metadata == NULL) {
-    return RC_BM_NOT_INITIALIZED;
-  }
-  return metadata->statData->numReadIO;
+    return bm->mgmtData->statData->numReads;
 }
 
 int getNumWriteIO(BM_BufferPool *const bm) {
-  BM_BufferPool *metadata = bm->mgmtData;
-  if (metadata == NULL) {
-    return RC_BM_NOT_INITIALIZED;
-  }
-  return metadata->statData->numWriteIO;
-}
-*/
-
-PageNumber *getFrameContents (BM_BufferPool *const bm)
-{
-    return RC_OK;
-}
-
-bool *getDirtyFlags (BM_BufferPool *const bm)
-{
-    return NULL;
-}
-
-int *getFixCounts (BM_BufferPool *const bm)
-{
-    return 0;
-}
-
-int getNumReadIO (BM_BufferPool *const bm)
-{
-    return 0;
-}
-
-int getNumWriteIO (BM_BufferPool *const bm)
-{
-    return 0;
+    return bm->mgmtData->statData->numWrites;
 }
 
 
