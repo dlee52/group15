@@ -159,8 +159,6 @@ RC forceFlushPool(BM_BufferPool *const bufferPool)
     // Check if the buffer pool has been initialized
     RETURN_IF_NULL(mgmtData, RC_BM_NOT_INITIALIZED, "Buffer pool not initialized.");
 
-    SM_FileHandle *fileHandle = mgmtData->fileHandle;
-
     // Iterate over all frames in the buffer pool
     for (int i = 0; i < bufferPool->numPages; ++i)
     {
