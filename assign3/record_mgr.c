@@ -137,22 +137,140 @@ RC freeSchema (Schema *schema)
     
 
 // dealing with records and attribute values
-RC createRecord (Record **record, Schema *schema)
+extern RC createRecord(Record **record, Schema *schema)
 {
+
+    // memory allocation for new record
+    *record = (Record *)malloc(sizeof(Record));
+
+    // set record values
+    setRecordValues(record, schema);
+
     return RC_OK;
 }
-    
-RC freeRecord (Record *record)
+
+extern RC freeRecord(Record *record)
 {
+    // The C library function void free(void *ptr) deallocates the memory previously
+    // allocated by a call to calloc, malloc, or realloc
+    free(record);
     return RC_OK;
 }
-    
-RC getAttr (Record *record, Schema *schema, int attrNum, Value **value)
+
+extern RC getAttr(Record *record, Schema *schema, int attrNum, Value **value)
 {
+
+    int res = 0;
+    for (int j = 0; j < attrNum; j++)
+    {
+
+        // case depending on the datatype string
+        res += setOffsetString(schema, j);
+
+        // case depending on the datatype int
+        res += setOffsetInt(schema, j);
+
+        // case depending on the datatype boolean
+        res += setOffsetBool(schema, j);
+
+        // case depending on the datatype float
+        res += setOffsetFloat(schema, j);
+    }
+    int objectSize = 0;
+    Value *valueObject = (Value *)malloc(sizeof(Value));
+    char *recordDataCharacter = record->data;
+    recordDataCharacter += res;
+
+    // case depending on the datattype int
+    setObjectForIntDataType(schema, valueObject, attrNum, recordDataCharacter);
+
+    // case depending on the datattype string
+    if (schema->dataTypes[attrNum] == DT_STRING)
+    {
+        // assigning string datatype to string in value object
+        valueObject->dt = DT_STRING;
+        objectSize = schema->typeLength[attrNum];
+        // storing the object size to value object
+        valueObject->v.stringV = (char *)malloc(objectSize + ONE);
+        // utility method to copy string from one to another
+        copyString(valueObject->v.stringV, recordDataCharacter);
+        valueObject->v.stringV[objectSize] = '\0';
+    }
+
+    // case depending on the datattype float
+    setObjectForFloatDataType(schema, valueObject, attrNum, recordDataCharacter);
+
+    // case depending on the datattype boolean
+    setObjectForBooleanDataType(schema, valueObject, attrNum, recordDataCharacter);
+
+    *value = valueObject;
     return RC_OK;
 }
-    
-RC setAttr (Record *record, Schema *schema, int attrNum, Value *value)
+
+extern RC setAttr(Record *record, Schema *schema, int attrNum, Value *value)
 {
+    int res = 0;
+    for (int j = 0; j < attrNum; j++)
+    {
+
+        // case depending on the datatype string
+        res += setOffsetString(schema, j);
+
+        // case depending on the datatype int
+        res += setOffsetInt(schema, j);
+
+        // case depending on the datatype boolean
+        res += setOffsetBool(schema, j);
+
+        // case depending on the datatype float
+        res += setOffsetFloat(schema, j);
+    }
+
+    // set data of the record to char variable
+    char *objectValue = record->data;
+    // assigning the data to the result
+    objectValue += res;
+    char *offsetResult;
+    int objectSize = schema->typeLength[attrNum];
+
+    // case depending on the datatype int
+    if (schema->dataTypes[attrNum] == DT_INT)
+    {
+        // storing int value from value object and storing them to objectvalue
+        // casting object value to int
+        *(int *)objectValue = value->v.intV;
+    }
+
+    // case depending on the datatype int
+    if (schema->dataTypes[attrNum] == DT_STRING)
+    {
+        offsetResult = (char *)malloc(objectSize + ONE);
+        // copy string value from value object to offsetresult
+        //  /The C library function char *strcpy(char *dest, const char *src) copies the string pointed to, by src to dest.
+        strcpy(offsetResult, value->v.stringV);
+        offsetResult[objectSize] = '\0';
+        // copy objectResult from value object to offsetvalue
+        //  /The C library function char *strcpy(char *dest, const char *src) copies the string pointed to, by src to dest.
+        strcpy(objectValue, offsetResult);
+        // The C library function void free(void *ptr) deallocates the memory previously allocated by a call to calloc, malloc, or realloc.
+        free(offsetResult);
+    }
+
+    // case depending on the datatype float
+    if (schema->dataTypes[attrNum] == DT_FLOAT)
+    {
+        // storing float value from value object and storing them to objectvalue
+        // casting object value to float
+        *(float *)objectValue = value->v.floatV;
+    }
+
+    // case depending on the datatype noolean
+    if (schema->dataTypes[attrNum] == DT_BOOL)
+    {
+        // storing boolean value from value object and storing them to objectvalue
+        // casting object value to boolean
+        *(bool *)objectValue = value->v.boolV;
+    }
+
     return RC_OK;
 }
