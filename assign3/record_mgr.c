@@ -48,6 +48,7 @@ RC shutdownRecordManager()
 // +----------------+----------------------------------------------------------*
 RC createTable(char *name, Schema *schema)
 {
+    CHECK_OK(createPageFile(name));
     return RC_OK;
 }
 
