@@ -120,20 +120,66 @@ RC closeScan (RM_ScanHandle *scan)
     
 
 // dealing with schemas
-extern int getRecordSize (Schema *schema)
+extern int getRecordSize(Schema *schema)
 {
+
+    // initializing record size
+    int rs = ZERO;
+    for (int j = 0; j < schema->numAttr; j++)
+    {
+
+        // case depending on Boolean DATA TYPE
+        rs += setSizeForBool(schema, j);
+
+        // case depending on Float DATA TYPE
+        rs += setSizeForFloat(schema, j);
+
+        // case depending on integer DATA TYPE
+        rs += setSizeForInt(schema, j);
+
+        // case depending on String DATA TYPE
+        rs += setSizeForString(schema, j);
+    }
+    return rs;
+}
+
+extern Schema *createSchema(int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys)
+{
+
+    // memory allocation
+    Schema *schema = (Schema *)malloc(sizeof(Schema));
+    ;
+
+    // initializing numattr to schema
+    schema->numAttr = numAttr;
+
+    // initializing attrNames to schema
+    schema->attrNames = attrNames;
+
+    // initializing dataTypes to schema
+    schema->dataTypes = dataTypes;
+
+    // initializing typeLength to schema
+    schema->typeLength = typeLength;
+
+    // initializing keySize to schema
+    schema->keySize = keySize;
+
+    // initializing keys to schema
+    schema->keyAttrs = keys;
+
+    return schema;
+}
+
+extern RC freeSchema(Schema *schema)
+{
+
+    // The C library function void free(void *ptr) deallocates the memory previously
+    // allocated by a call to calloc, malloc, or realloc
+    free(schema);
     return RC_OK;
 }
-    
-extern Schema *createSchema (int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys)
-{
-    return NULL;
-}
-    
-RC freeSchema (Schema *schema)
-{
-    return RC_OK;
-}
+
     
 
 // dealing with records and attribute values
