@@ -2,127 +2,237 @@
  * +----------------+----------------------------------------------------------+
  *    Module/Func.   record_mgr.c
  * +----------------+----------------------------------------------------------+
- *    Description    
- *                   The record manager handles tables with a fixed schema. 
- *                   Clients can insert records, delete records, update records, 
- *                   and scan through the records in a table. A scan is associated 
- *                   with a search condition and only returns records that match 
- *                   the search condition. Each table should be stored in a separate 
- *                   page file and your record manager should access the pages of 
- *                   the file through the buffer manager implemented in the 
+ *    Description
+ *                   The record manager handles tables with a fixed schema.
+ *                   Clients can insert records, delete records, update records,
+ *                   and scan through the records in a table. A scan is associated
+ *                   with a search condition and only returns records that match
+ *                   the search condition. Each table should be stored in a separate
+ *                   page file and your record manager should access the pages of
+ *                   the file through the buffer manager implemented in the
  *                   last assignment.
  * +----------------+----------------------------------------------------------+
  */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include "record_mgr.h"
-#include "validation.h"
+#include "buffer_mgr.h"
 #include "storage_mgr.h"
+#include "record_mgr.h"
+#include "tables.h"
+#include "dberror.h"
+
+#define NEGATIVE_ONE -1
+#define ZERO 0
+#define ONE 1
+
+#define SIZE_ONE 1
+#define SIZE_FOUR 4
 
 // table and manager
-RC initRecordManager (void *mgmtData)
+RC initRecordManager(void *mgmtData)
 {
     return RC_OK;
 }
-    
-RC shutdownRecordManager ()
+
+RC shutdownRecordManager()
 {
     return RC_OK;
 }
-    
+
 // +----------------+----------------------------------------------------------*
-//    Description    Create the underlying page file and store information 
-//                   about the schema, free-space, … and so on in the Table 
+//    Description    Create the underlying page file and store information
+//                   about the schema, free-space, … and so on in the Table
 //                   Information pages.
 // +----------------+----------------------------------------------------------*
-RC createTable (char *name, Schema *schema)
+RC createTable(char *name, Schema *schema)
 {
-    // create a page file
-    CHECK_OK(createPageFile(name));
-
     return RC_OK;
 }
-    
+
 // +----------------+----------------------------------------------------------*
-//    Description    All operations on a table such as scanning or inserting 
-//                   records require the table to be opened first. Afterwards, 
-//                   clients can use the RM_TableData struct to interact 
+//    Description    All operations on a table such as scanning or inserting
+//                   records require the table to be opened first. Afterwards,
+//                   clients can use the RM_TableData struct to interact
 //                   with the table.
 // +----------------+----------------------------------------------------------*
-RC openTable (RM_TableData *rel, char *name)
+RC openTable(RM_TableData *rel, char *name)
 {
     return RC_OK;
 }
-    
-// +----------------+----------------------------------------------------------*
-//    Description    Cause all outstanding changes to the table to be written 
-//                   to the page file.
-// +----------------+----------------------------------------------------------*
-RC closeTable (RM_TableData *rel)
-{
-    return RC_OK;
-}
-    
-// +----------------+----------------------------------------------------------*
-//    Description    
-//                   Delete the page file
-//    
-//    Clarification  
-//                   Any other behaviors required?
-// +----------------+----------------------------------------------------------*
-RC deleteTable (char *name)
-{
-    return RC_OK;
-}
-    
 
 // +----------------+----------------------------------------------------------*
-//    Description    Cause all outstanding changes to the table to be written 
+//    Description    Cause all outstanding changes to the table to be written
 //                   to the page file.
 // +----------------+----------------------------------------------------------*
-int getNumTuples (RM_TableData *rel)
+RC closeTable(RM_TableData *rel)
+{
+    return RC_OK;
+}
+
+// +----------------+----------------------------------------------------------*
+//    Description
+//                   Delete the page file
+//
+//    Clarification
+//                   Any other behaviors required?
+// +----------------+----------------------------------------------------------*
+RC deleteTable(char *name)
+{
+    return RC_OK;
+}
+
+// +----------------+----------------------------------------------------------*
+//    Description    Cause all outstanding changes to the table to be written
+//                   to the page file.
+// +----------------+----------------------------------------------------------*
+int getNumTuples(RM_TableData *rel)
 {
     return 0;
 }
-    
 
 // handling records in a table
-RC insertRecord (RM_TableData *rel, Record *record)
+RC insertRecord(RM_TableData *rel, Record *record)
 {
     return RC_OK;
 }
-    
-RC deleteRecord (RM_TableData *rel, RID id)
+
+RC deleteRecord(RM_TableData *rel, RID id)
 {
     return RC_OK;
 }
-    
-RC updateRecord (RM_TableData *rel, Record *record)
+
+RC updateRecord(RM_TableData *rel, Record *record)
 {
     return RC_OK;
 }
-    
-RC getRecord (RM_TableData *rel, RID id, Record *record)
+
+RC getRecord(RM_TableData *rel, RID id, Record *record)
 {
     return RC_OK;
 }
-    
 
 // scans
-RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
+RC startScan(RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
 {
     return RC_OK;
 }
-    
-RC next (RM_ScanHandle *scan, Record *record)
+
+RC next(RM_ScanHandle *scan, Record *record)
 {
     return RC_OK;
 }
-    
-RC closeScan (RM_ScanHandle *scan)
+
+RC closeScan(RM_ScanHandle *scan)
 {
     return RC_OK;
 }
-    
+
+setRecordValues(Record **record, Schema *schema)
+{
+
+    // memory allocation for data
+    (*record)->data = (char *)malloc(getRecordSize(schema));
+
+    // Set page to negative to one since its a new record
+    (*record)->id.page = NEGATIVE_ONE;
+
+    // Set slot to negative to one since its a new record
+    (*record)->id.slot = NEGATIVE_ONE;
+}
+
+int setSizeForBool(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_BOOL)
+        return SIZE_ONE;
+    return ZERO;
+}
+
+int setSizeForFloat(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_FLOAT)
+        return SIZE_FOUR;
+    return ZERO;
+}
+
+int setSizeForInt(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_INT)
+        return SIZE_FOUR;
+    return ZERO;
+}
+
+int setSizeForString(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_STRING)
+        return schema->typeLength[j];
+    return ZERO;
+}
+
+int setOffsetString(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_STRING)
+        return schema->typeLength[j];
+    return ZERO;
+}
+
+int setOffsetInt(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_INT)
+        return sizeof(int);
+    return ZERO;
+}
+
+int setOffsetFloat(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_FLOAT)
+        return sizeof(float);
+    return ZERO;
+}
+
+int setOffsetBool(Schema *schema, int j)
+{
+    if (schema->dataTypes[j] == DT_BOOL)
+        return sizeof(bool);
+    return ZERO;
+}
+
+// utility method to copy from one string to another
+copyString(char *valueChar, char *recordDataCharacter)
+{
+    strcpy(valueChar, recordDataCharacter);
+}
+
+setObjectForIntDataType(Schema *schema, Value *valueObject, int attrNum, char *recordDataCharacter)
+{
+    if (schema->dataTypes[attrNum] == DT_INT)
+    {
+        // The C library function void *memcpy(void *dest, const void *src, size_t n) copies n characters from memory area src to memory area dest.
+        memcpy(&(valueObject->v.intV), recordDataCharacter, SIZE_FOUR);
+        valueObject->dt = DT_INT;
+    }
+}
+
+setObjectForFloatDataType(Schema *schema, Value *valueObject, int attrNum, char *recordDataCharacter)
+{
+    if (schema->dataTypes[attrNum] == DT_BOOL)
+    {
+        valueObject->dt = DT_BOOL;
+        // The C library function void *memcpy(void *dest, const void *src, size_t n) copies n characters from memory area src to memory area dest.
+        memcpy(&(valueObject->v.boolV), recordDataCharacter, ONE);
+    }
+}
+
+setObjectForBooleanDataType(Schema *schema, Value *valueObject, int attrNum, char *recordDataCharacter)
+{
+    if (schema->dataTypes[attrNum] == DT_FLOAT)
+    {
+        valueObject->dt = DT_FLOAT;
+        // The C library function void *memcpy(void *dest, const void *src, size_t n) copies n characters from memory area src to memory area dest.
+        memcpy(&(valueObject->v.floatV), recordDataCharacter, SIZE_FOUR);
+    }
+}
 
 // dealing with schemas
 extern int getRecordSize(Schema *schema)
@@ -184,8 +294,6 @@ extern RC freeSchema(Schema *schema)
     free(schema);
     return RC_OK;
 }
-
-    
 
 // dealing with records and attribute values
 extern RC createRecord(Record **record, Schema *schema)
