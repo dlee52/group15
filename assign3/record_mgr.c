@@ -15,6 +15,8 @@
  */
 
 #include "record_mgr.h"
+#include "validation.h"
+#include "storage_mgr.h"
 
 // table and manager
 RC initRecordManager (void *mgmtData)
@@ -34,6 +36,9 @@ RC shutdownRecordManager ()
 // +----------------+----------------------------------------------------------*
 RC createTable (char *name, Schema *schema)
 {
+    // create a page file
+    CHECK_OK(createPageFile(name));
+
     return RC_OK;
 }
     
