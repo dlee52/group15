@@ -61,6 +61,7 @@ int findFreePageSlot(char *data, int recordSize)
 }
 typedef int RC;
 
+#define RC_SCAN_CONDITION_NOT_FOUND 15
 #define RC_OK 0
 #define RC_RM_NO_TUPLE_WITH_GIVEN_RID 1
 #define RC_UNPIN_PAGE_FAILED 2
@@ -310,20 +311,119 @@ RC getRecord(RM_TableData *rel, RID id, Record *record) {
 
 
 // scans
-RC startScan(RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
-{
+RC startScan(RM_TableData *rel, RM_ScanHandle *scan, Expr *cond) {
+    // Checking if scan condition (test expression) is present
+    if (cond == NULL) {
+        return RC_SCAN_CONDITION_NOT_FOUND;
+    }
+
+    // Open the table in memory
+    openTable(rel, "ScanTable");
+
+    // Setting up the scan manager
+    RecordManager *scanManager = (RecordManager*) malloc(sizeof(RecordManager));
+    scanManager->recordID.page = 1;    // start scanning from the first page
+    scanManager->recordID.slot = 0;    // start scanning from the first slot
+    scanManager->scanCount = 0;        // no records have been scanned yet
+    scanManager->condition = cond;     // setting the scan condition
+    scan->mgmtData = scanManager;      // set the scan's meta data
+
+    // Setting the table manager
+    RecordManager *tableManager = rel->mgmtData;
+    tableManager->tuplesCount = ATTRIBUTE_SIZE;   // setting the tuple count
+
+    // Setting the scan's table i.e. the table which has to be scanned using the specified condition
+    scan->rel = rel;
+
     return RC_OK;
 }
 
-RC next(RM_ScanHandle *scan, Record *record)
-{
-    return RC_OK;
+
+RC next(RM_ScanHandle *scan, Record *record) {
+    RecordManager *scanManager = scan->mgmtData;
+    RecordManager *tableManager = scan->rel->mgmtData;
+    Schema *schema = scan->rel->schema;
+
+    if (scanManager->condition == NULL) {
+        return RC_SCAN_CONDITION_NOT_FOUND;
+    }
+
+    Value *result = malloc(sizeof(Value));
+
+    int recordSize = getRecordSize(schema);
+    int totalSlots = PAGE_SIZE / recordSize;
+    int tuplesCount = tableManager->tuplesCount;
+
+    if (tuplesCount == 0) {
+        return RC_RM_NO_MORE_TUPLES;
+    }
+
+    while (scanManager->scanCount <= tuplesCount) {
+        if (scanManager->scanCount <= 0) {
+            scanManager->recordID.page = 1;
+            scanManager->recordID.slot = 0;
+        } else {
+            scanManager->recordID.slot++;
+
+            if (scanManager->recordID.slot >= totalSlots) {
+                scanManager->recordID.slot = 0;
+                scanManager->recordID.page++;
+            }
+        }
+
+        pinPage(&tableManager->bufferPool, &scanManager->pageHandle, scanManager->recordID.page);
+        char *data = scanManager->pageHandle.data;
+        data = data + (scanManager->recordID.slot * recordSize);
+
+        record->id.page = scanManager->recordID.page;
+        record->id.slot = scanManager->recordID.slot;
+
+        char *dataPointer = record->data;
+        *dataPointer = '-';
+        memcpy(++dataPointer, data + 1, recordSize - 1);
+
+        scanManager->scanCount++;
+
+        evalExpr(record, schema, scanManager->condition, &result);
+
+        if (result->v.boolV == TRUE) {
+            unpinPage(&tableManager->bufferPool, &scanManager->pageHandle);
+            return RC_OK;
+        }
+    }
+
+    unpinPage(&tableManager->bufferPool, &scanManager->pageHandle);
+    scanManager->recordID.page = 1;
+    scanManager->recordID.slot = 0;
+    scanManager->scanCount = 0;
+
+    return RC_RM_NO_MORE_TUPLES;
 }
+
 
 RC closeScan(RM_ScanHandle *scan)
 {
+    RecordManager *scanManager = scan->mgmtData;
+    RecordManager *tableManager = scan->rel->mgmtData;
+
+    // Check if scan was incomplete
+    if (scanManager->scanCount > 0) {
+        // Unpin the page i.e. remove it from the buffer pool.
+        unpinPage(&tableManager->bufferPool, &scanManager->pageHandle);
+
+        // Reset the Scan Manager's values
+        scanManager->scanCount = 0;
+        scanManager->recordID.page = 1;
+        scanManager->recordID.slot = 0;
+    }
+
+    // De-allocate all the memory space allocated to the scan's meta data (our custom structure)
+    free(scan->mgmtData);
+    scan->mgmtData = NULL;
+
     return RC_OK;
 }
+
 
 setRecordValues(Record **record, Schema *schema)
 {
