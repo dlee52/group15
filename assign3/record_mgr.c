@@ -23,6 +23,58 @@
 #include "tables.h"
 #include "dberror.h"
 
+// This is custom data structure defined for making the use of Record Manager.
+typedef struct RecordManager
+{
+	// Buffer Manager's PageHandle for using Buffer Manager to access Page files
+	BM_PageHandle pageHandle;	// Buffer Manager PageHandle 
+	// Buffer Manager's Buffer Pool for using Buffer Manager	
+	BM_BufferPool bufferPool;
+	// Record ID	
+	RID recordID;
+	// This variable defines the condition for scanning the records in the table
+	Expr *condition;
+	// This variable stores the total number of tuples in the table
+	int tuplesCount;
+	// This variable stores the location of first free page which has empty slots in table
+	int freePage;
+	// This variable stores the count of the number of records scanned
+	int scanCount;
+} RecordManager;
+
+const int MAX_NUMBER_OF_PAGES = 200;
+const int ATTRIBUTE_SIZE = 20; // Size of the name of the attribute
+
+RecordManager *recordManager;
+
+// ******** CUSTOM FUNCTIONS ******** //
+
+// This function returns a free slot within a page
+int findFreePageSlot(char *data, int recordSize)
+{
+	int i, totalSlots = PAGE_SIZE / recordSize; 
+
+	for (i = 0; i < totalSlots; i++)
+		if (data[i * recordSize] != '+')
+			return i;
+	return -1;
+}
+typedef int RC;
+
+#define RC_OK 0
+#define RC_RM_NO_TUPLE_WITH_GIVEN_RID 1
+#define RC_UNPIN_PAGE_FAILED 2
+#define RC_OK 0
+#define RC_PIN_PAGE_FAILED -1
+#define CHECK_OK(expression) { \
+    RC result = (expression); \
+    if (result != RC_OK) { \
+        return result; \
+    } \
+}
+
+
+
 #define NEGATIVE_ONE -1
 #define ZERO 0
 #define ONE 1
@@ -94,25 +146,168 @@ int getNumTuples(RM_TableData *rel)
 }
 
 // handling records in a table
-RC insertRecord(RM_TableData *rel, Record *record)
-{
+/**
+ * Inserts a new record into the table.
+ * Returns RC_OK on success, or an error code on failure.
+ */
+
+
+RC insertRecord(RM_TableData *rel, Record *record) {
+    // Retrieve metadata stored in the table
+    RecordManager *recordManager = rel->mgmtData;    
+    
+    // Set the record ID for this record
+    RID *recordID = &record->id; 
+    
+    // Get the size in bytes needed to store one record for the given schema
+    int recordSize = getRecordSize(rel->schema);
+    
+    // Set the first free page to the current page
+    recordID->page = recordManager->freePage;
+
+    // Pin the page, i.e. tell the buffer manager that we are using this page
+    pinPage(&recordManager->bufferPool, &recordManager->pageHandle, recordID->page);
+    
+    // Set the data to the initial position of the record's data
+    char *data = recordManager->pageHandle.data;
+    
+    // Get a free slot using our custom function
+    recordID->slot = findFreePageSlot(data, recordSize);
+
+    while (recordID->slot == -1) {
+        // If the pinned page doesn't have a free slot then unpin that page
+        unpinPage(&recordManager->bufferPool, &recordManager->pageHandle);        
+        
+        // Increment the page
+        recordID->page++;
+        
+        // Bring the new page into the buffer pool using the buffer manager
+        pinPage(&recordManager->bufferPool, &recordManager->pageHandle, recordID->page);
+        
+        // Set the data to the initial position of the record's data        
+        data = recordManager->pageHandle.data;
+
+        // Again check for a free slot using our custom function
+        recordID->slot = findFreePageSlot(data, recordSize);
+    }
+    
+    char *slotPointer = data;
+    
+    // Mark the page dirty to notify that this page was modified
+    markDirty(&recordManager->bufferPool, &recordManager->pageHandle);
+    
+    // Calculate the slot starting position
+    slotPointer += (recordID->slot * recordSize);
+
+    // Append '+' as a tombstone to indicate that this is a new record and should be removed if space is less
+    *slotPointer = '+';
+
+    // Copy the record's data to the memory location pointed to by slotPointer
+    memcpy(++slotPointer, record->data + 1, recordSize - 1);
+
+    // Unpin the page, i.e. remove the page from the buffer pool
+    unpinPage(&recordManager->bufferPool, &recordManager->pageHandle);
+    
+    // Increment the count of tuples
+    recordManager->tuplesCount++;
+    
+    // Pin the page back
+    pinPage(&recordManager->bufferPool, &recordManager->pageHandle, 0);
+
     return RC_OK;
 }
 
 RC deleteRecord(RM_TableData *rel, RID id)
 {
+    RecordManager *manager = rel->mgmtData;
+
+    // Pin the page containing the record to delete
+    RC rc = pinPage(&manager->bufferPool, &manager->pageHandle, id.page);
+    if (rc != RC_OK) {
+        return rc;
+    }
+
+    // Calculate the offset of the record within the page
+    int recordSize = getRecordSize(rel->schema);
+    char *recordData = manager->pageHandle.data + (id.slot * recordSize);
+
+    // Mark the record as deleted using tombstone marker '-'
+    *recordData = '-';
+
+    // Mark the page as dirty since it was modified
+    markDirty(&manager->bufferPool, &manager->pageHandle);
+
+    // Unpin the page since it's no longer needed in memory
+    unpinPage(&manager->bufferPool, &manager->pageHandle);
+
+    // Update the free page in the record manager
+    manager->freePage = id.page;
+
     return RC_OK;
 }
-
 RC updateRecord(RM_TableData *rel, Record *record)
 {
+    RecordManager *recordManager = rel->mgmtData;
+    RID *recordID = &record->id;
+
+    // Pin the page containing the record to be updated
+    pinPage(&recordManager->bufferPool, &recordManager->pageHandle, recordID->page);
+
+    // Retrieve the data and schema for the table
+    char *data = recordManager->pageHandle.data;
+    Schema *schema = rel->schema;
+
+    // Calculate the offset of the record to be updated in the page data
+    int recordOffset = recordID->slot * getRecordSize(schema);
+
+    // Update the tombstone value to indicate that the record is not deleted
+    data[recordOffset] = '+';
+
+    // Copy the new record data to the page data
+    memcpy(data + recordOffset + 1, record->data + 1, getRecordSize(schema) - 1);
+
+    // Mark the page as dirty
+    markDirty(&recordManager->bufferPool, &recordManager->pageHandle);
+
+    // Unpin the page
+    unpinPage(&recordManager->bufferPool, &recordManager->pageHandle);
+
     return RC_OK;
 }
 
-RC getRecord(RM_TableData *rel, RID id, Record *record)
-{
+
+RC getRecord(RM_TableData *rel, RID id, Record *record) {
+    // Retrieve the record manager from the table metadata
+    RecordManager *recordManager = rel->mgmtData;
+
+    // Pin the page containing the record we want to retrieve
+    if (pinPage(&recordManager->bufferPool, &recordManager->pageHandle, id.page) != RC_OK) {
+        return RC_PIN_PAGE_FAILED;
+    }
+
+    // Calculate the location of the record in the page
+    int recordSize = getRecordSize(rel->schema);
+    char *recordLocation = recordManager->pageHandle.data + (id.slot * recordSize);
+
+    // Check if the record exists in the page
+    if (*recordLocation != '+') {
+        unpinPage(&recordManager->bufferPool, &recordManager->pageHandle);
+        return RC_RM_NO_TUPLE_WITH_GIVEN_RID;
+    }
+
+    // Copy the record data to the Record struct
+    record->id = id;
+    char *data = record->data;
+    memcpy(++data, recordLocation + 1, recordSize - 1);
+
+    // Unpin the page
+    if (unpinPage(&recordManager->bufferPool, &recordManager->pageHandle) != RC_OK) {
+        return RC_UNPIN_PAGE_FAILED;
+    }
+
     return RC_OK;
 }
+
 
 // scans
 RC startScan(RM_TableData *rel, RM_ScanHandle *scan, Expr *cond)
